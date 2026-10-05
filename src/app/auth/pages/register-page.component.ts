@@ -6,9 +6,9 @@ import { BILLBOARD_PATH, LOGIN_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 
-type Field = 'name' | 'email' | 'password';
+type Field = 'name' | 'email' | 'phone' | 'address' | 'password';
 
-/** Fields mirror RegisterRequest of csp-auth-api (name, email, password); the mockup's extra profile fields have no contract yet. */
+/** Fields mirror RegisterRequest of csp-auth-api (ADR-024). The portal asks for one full name, not first and last name. */
 @Component({
   selector: 'app-auth-register-page',
   standalone: true,
@@ -36,6 +36,22 @@ type Field = 'name' | 'email' | 'password';
           }
         </div>
         <div class="form-group">
+          <label for="register-phone">Teléfono</label>
+          <input id="register-phone" class="form-input" type="tel" autocomplete="tel" placeholder="Ej. 3001234567"
+                 formControlName="phone" [attr.aria-describedby]="showError('phone') ? 'register-phone-error' : null" />
+          @if (showError('phone')) {
+            <span id="register-phone-error" class="field-error">Ingresa solo dígitos, con + opcional al inicio (7 a 15).</span>
+          }
+        </div>
+        <div class="form-group">
+          <label for="register-address">Dirección</label>
+          <input id="register-address" class="form-input" type="text" autocomplete="street-address" placeholder="Ej. Calle 123 #45-67"
+                 formControlName="address" [attr.aria-describedby]="showError('address') ? 'register-address-error' : null" />
+          @if (showError('address')) {
+            <span id="register-address-error" class="field-error">Ingresa tu dirección.</span>
+          }
+        </div>
+        <div class="form-group">
           <label for="register-password">Contraseña</label>
           <input id="register-password" class="form-input" type="password" autocomplete="new-password" placeholder="••••••••"
                  formControlName="password" [attr.aria-describedby]="showError('password') ? 'register-password-error' : null" />
@@ -60,6 +76,8 @@ export class RegisterPageComponent {
   protected readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
+    phone: ['', [Validators.required, Validators.pattern(/^\+?[0-9]{7,15}$/)]],
+    address: ['', [Validators.required, Validators.maxLength(255)]],
     password: ['', Validators.required],
   });
   protected readonly loginPath = LOGIN_PATH;

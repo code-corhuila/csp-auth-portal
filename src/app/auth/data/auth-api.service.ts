@@ -32,6 +32,8 @@ export class AuthApiService {
       email: request.email,
       password: request.password,
       name: request.name,
+      phone: request.phone,
+      address: request.address,
       roles: ['CLIENT'],
     };
     this.users.push(user);
