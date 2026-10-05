@@ -50,7 +50,7 @@ describe('AuthApiService (Cut 2, synthetic data)', () => {
   });
 
   it('registers a new user with the CLIENT role', done => {
-    service.register({ email: 'new@cinesync.com', password: 'SecurePass123!', name: 'New User' }).subscribe(response => {
+    service.register({ email: 'new@cinesync.com', password: 'SecurePass123!', name: 'New User', phone: '3001234567', address: 'Calle 1' }).subscribe(response => {
       expect(response.user.email).toBe('new@cinesync.com');
       expect(response.user.roles).toEqual(['CLIENT']);
       done();
@@ -58,7 +58,7 @@ describe('AuthApiService (Cut 2, synthetic data)', () => {
   });
 
   it('rejects a registration with an email that is already taken', done => {
-    service.register({ email: client.email, password: 'SecurePass123!', name: 'Other' }).subscribe({
+    service.register({ email: client.email, password: 'SecurePass123!', name: 'Other', phone: '3001234567', address: 'Calle 1' }).subscribe({
       error: error => {
         expect(error.status).toBe(409);
         expect(error.code).toBe('EMAIL_ALREADY_REGISTERED');
