@@ -1,27 +1,33 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { LOGIN_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
 
 @Component({
   selector: 'app-auth-forgot-password-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
+  styleUrl: './auth-form.css',
   template: `
-    <section aria-labelledby="forgot-password-title">
-      <h1 id="forgot-password-title">Recover password</h1>
-      <p>Request a link to reset your password.</p>
-      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <label for="forgot-email">Email</label>
-        <input id="forgot-email" type="email" autocomplete="username" formControlName="email"
-               [attr.aria-describedby]="invalid() ? 'forgot-email-error' : null" />
-        @if (invalid()) {
-          <p id="forgot-email-error">Enter a valid email.</p>
-        }
+    <section class="auth-card" aria-labelledby="forgot-password-title">
+      <h1 id="forgot-password-title">Recuperar contraseña</h1>
+      <p>Solicita un enlace para restablecer tu contraseña.</p>
+      <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="form-group">
+          <label for="forgot-email">Correo electrónico</label>
+          <input id="forgot-email" class="form-input" type="email" autocomplete="username" placeholder="usuario@cinesync.com"
+                 formControlName="email" [attr.aria-describedby]="invalid() ? 'forgot-email-error' : null" />
+          @if (invalid()) {
+            <span id="forgot-email-error" class="field-error">Ingresa un correo válido.</span>
+          }
+        </div>
         @if (sent()) {
-          <p role="status">If the account exists, we sent a link to reset the password.</p>
+          <p class="form-status" role="status">Si la cuenta existe, enviamos un enlace para restablecer la contraseña.</p>
         }
-        <button type="submit" [disabled]="pending()">Send link</button>
+        <button class="btn-primary" type="submit" [disabled]="pending()">Enviar enlace</button>
       </form>
+      <p class="auth-switch"><a [routerLink]="loginPath">Volver a iniciar sesión</a></p>
     </section>
   `,
 })
@@ -31,6 +37,7 @@ export class ForgotPasswordPageComponent {
   protected readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
   });
+  protected readonly loginPath = LOGIN_PATH;
   protected readonly pending = signal(false);
   protected readonly sent = signal(false);
   private readonly submitted = signal(false);
