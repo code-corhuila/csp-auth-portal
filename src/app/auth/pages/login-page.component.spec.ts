@@ -40,7 +40,7 @@ describe('LoginPageComponent', () => {
 
   it('renders its heading and labelled fields', () => {
     const root: HTMLElement = create().nativeElement;
-    expect(root.querySelector('h1')!.textContent).toContain('Sign in');
+    expect(root.querySelector('h1')!.textContent).toContain('Iniciar sesión');
     expect(root.querySelector('label[for="login-email"]')).not.toBeNull();
     expect(root.querySelector('label[for="login-password"]')).not.toBeNull();
   });
@@ -67,7 +67,7 @@ describe('LoginPageComponent', () => {
   it('shows an invalid-credentials message and creates no session', () => {
     const fixture = create();
     const root = submit(fixture, client.email, 'wrong-password');
-    expect(root.querySelector('[role="alert"]')!.textContent).toContain('Email or password is incorrect.');
+    expect(root.querySelector('[role="alert"]')!.textContent).toContain('Correo o contraseña incorrectos.');
     expect(session.isAuthenticated()).toBeFalse();
     expect(router.navigateByUrl).not.toHaveBeenCalled();
   });

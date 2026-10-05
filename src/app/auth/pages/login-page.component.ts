@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
+import { FORGOT_PASSWORD_PATH, REGISTER_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { safeReturnUrl } from '../return-url';
@@ -9,29 +10,38 @@ import { safeReturnUrl } from '../return-url';
 @Component({
   selector: 'app-auth-login-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
+  styleUrl: './auth-form.css',
   template: `
-    <section aria-labelledby="login-title">
-      <h1 id="login-title">Sign in</h1>
-      <p>Sign in to your Cinesync account.</p>
-      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <label for="login-email">Email</label>
-        <input id="login-email" type="email" autocomplete="username" formControlName="email"
-               [attr.aria-describedby]="showError('email') ? 'login-email-error' : null" />
-        @if (showError('email')) {
-          <p id="login-email-error">Enter a valid email.</p>
-        }
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password" autocomplete="current-password" formControlName="password"
-               [attr.aria-describedby]="showError('password') ? 'login-password-error' : null" />
-        @if (showError('password')) {
-          <p id="login-password-error">Enter your password.</p>
-        }
+    <section class="auth-card" aria-labelledby="login-title">
+      <h1 id="login-title">Iniciar sesión</h1>
+      <p>Ingresa a tu cuenta de Cinesync.</p>
+      <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="form-group">
+          <label for="login-email">Correo electrónico</label>
+          <input id="login-email" class="form-input" type="email" autocomplete="username" placeholder="usuario@cinesync.com"
+                 formControlName="email" [attr.aria-describedby]="showError('email') ? 'login-email-error' : null" />
+          @if (showError('email')) {
+            <span id="login-email-error" class="field-error">Ingresa un correo válido.</span>
+          }
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input id="login-password" class="form-input" type="password" autocomplete="current-password" placeholder="••••••••"
+                 formControlName="password" [attr.aria-describedby]="showError('password') ? 'login-password-error' : null" />
+          @if (showError('password')) {
+            <span id="login-password-error" class="field-error">Ingresa tu contraseña.</span>
+          }
+        </div>
         @if (failure(); as message) {
-          <p role="alert">{{ message }}</p>
+          <p class="form-error" role="alert">{{ message }}</p>
         }
-        <button type="submit" [disabled]="pending()">Sign in</button>
+        <button class="btn-primary" type="submit" [disabled]="pending()">Ingresar</button>
       </form>
+      <p class="auth-switch">
+        <a [routerLink]="forgotPasswordPath">¿Olvidaste tu contraseña?</a>
+      </p>
+      <p class="auth-switch">¿Aún no tienes cuenta? <a [routerLink]="registerPath">Regístrate aquí</a></p>
     </section>
   `,
 })
@@ -45,6 +55,8 @@ export class LoginPageComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+  protected readonly registerPath = REGISTER_PATH;
+  protected readonly forgotPasswordPath = FORGOT_PASSWORD_PATH;
   protected readonly pending = signal(false);
   protected readonly failure = signal<string | null>(null);
   private readonly submitted = signal(false);
