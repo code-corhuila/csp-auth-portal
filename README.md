@@ -53,9 +53,9 @@ Registering a new account adds a `CLIENT` to the in-memory list; a page reload f
 
 | Route (under `/auth`) | Behaviour |
 |---|---|
-| `login` | Starts a session and goes to the `returnUrl` it was given, or to the billboard `/movies` |
-| `register` | Creates a `CLIENT`, starts a session and goes to `/movies` |
-| `forgot-password` | Always confirms neutrally, whether or not the account exists |
+| `login` | Modal. Starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
+| `register` | Modal. Creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
+| `forgot-password` | Modal. Always confirms neutrally, whether or not the account exists |
 
 The session lives in memory (`AuthSessionService`). `authGuard` sends anonymous visitors to
 `/auth/login?returnUrl=...`; `roleGuard` opens `/admin` only for `ADMIN` and sends any other

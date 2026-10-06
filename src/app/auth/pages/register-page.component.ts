@@ -4,44 +4,40 @@ import { Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
 import { BILLBOARD_PATH, LOGIN_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
-import { AuthSessionService } from '../data/session-store';
+import { AuthModalComponent } from '../ui/auth-modal.component';
+import { ToastService } from '../ui/toast.service';
 
-type Field = 'name' | 'email' | 'phone' | 'address' | 'password';
+type Field = 'firstName' | 'lastName' | 'address' | 'phone' | 'email' | 'password';
 
-/** Fields mirror RegisterRequest of csp-auth-api (ADR-024). The portal asks for one full name, not first and last name. */
+/**
+ * Fields follow the mockup; the request follows RegisterRequest of csp-auth-api (ADR-024), so first and
+ * last name travel joined as `name`. Like the mockup, registering does not sign in: it opens login.
+ */
 @Component({
   selector: 'app-auth-register-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthModalComponent],
   styleUrl: './auth-form.css',
   template: `
-    <section class="auth-card" aria-labelledby="register-title">
-      <h1 id="register-title">Crear cuenta</h1>
-      <p>Crea tu cuenta de Cinesync.</p>
+    <app-auth-modal title="Crear cuenta" titleId="register-title" [maxWidth]="520" (closed)="close()">
       <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <div class="form-group">
-          <label for="register-name">Nombre completo</label>
-          <input id="register-name" class="form-input" type="text" autocomplete="name" placeholder="Ej. Juan Carlos Pérez"
-                 formControlName="name" [attr.aria-describedby]="showError('name') ? 'register-name-error' : null" />
-          @if (showError('name')) {
-            <span id="register-name-error" class="field-error">Ingresa tu nombre.</span>
-          }
-        </div>
-        <div class="form-group">
-          <label for="register-email">Correo electrónico</label>
-          <input id="register-email" class="form-input" type="email" autocomplete="username" placeholder="juan@cinesync.com"
-                 formControlName="email" [attr.aria-describedby]="showError('email') ? 'register-email-error' : null" />
-          @if (showError('email')) {
-            <span id="register-email-error" class="field-error">Ingresa un correo válido.</span>
-          }
-        </div>
-        <div class="form-group">
-          <label for="register-phone">Teléfono</label>
-          <input id="register-phone" class="form-input" type="tel" autocomplete="tel" placeholder="Ej. 3001234567"
-                 formControlName="phone" [attr.aria-describedby]="showError('phone') ? 'register-phone-error' : null" />
-          @if (showError('phone')) {
-            <span id="register-phone-error" class="field-error">Ingresa solo dígitos, con + opcional al inicio (7 a 15).</span>
-          }
+        <div class="form-row">
+          <div class="form-group">
+            <label for="register-firstName">Nombres</label>
+            <input id="register-firstName" class="form-input" type="text" autocomplete="given-name" placeholder="Ej. Juan Carlos"
+                   formControlName="firstName" [attr.aria-describedby]="showError('firstName') ? 'register-firstName-error' : null" />
+            @if (showError('firstName')) {
+              <span id="register-firstName-error" class="field-error">Ingresa tus nombres.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="register-lastName">Apellidos</label>
+            <input id="register-lastName" class="form-input" type="text" autocomplete="family-name" placeholder="Ej. Pérez Gómez"
+                   formControlName="lastName" [attr.aria-describedby]="showError('lastName') ? 'register-lastName-error' : null" />
+            @if (showError('lastName')) {
+              <span id="register-lastName-error" class="field-error">Ingresa tus apellidos.</span>
+            }
+          </div>
         </div>
         <div class="form-group">
           <label for="register-address">Dirección</label>
@@ -50,6 +46,24 @@ type Field = 'name' | 'email' | 'phone' | 'address' | 'password';
           @if (showError('address')) {
             <span id="register-address-error" class="field-error">Ingresa tu dirección.</span>
           }
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="register-phone">Teléfono</label>
+            <input id="register-phone" class="form-input" type="tel" autocomplete="tel" placeholder="Ej. 3001234567"
+                   formControlName="phone" [attr.aria-describedby]="showError('phone') ? 'register-phone-error' : null" />
+            @if (showError('phone')) {
+              <span id="register-phone-error" class="field-error">Solo dígitos, con + opcional al inicio (7 a 15).</span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="register-email">Correo electrónico</label>
+            <input id="register-email" class="form-input" type="email" autocomplete="username" placeholder="juan@cinesync.com"
+                   formControlName="email" [attr.aria-describedby]="showError('email') ? 'register-email-error' : null" />
+            @if (showError('email')) {
+              <span id="register-email-error" class="field-error">Ingresa un correo válido.</span>
+            }
+          </div>
         </div>
         <div class="form-group">
           <label for="register-password">Contraseña</label>
@@ -65,19 +79,20 @@ type Field = 'name' | 'email' | 'phone' | 'address' | 'password';
         <button class="btn-primary" type="submit" [disabled]="pending()">Registrarse</button>
       </form>
       <p class="auth-switch">¿Ya tienes una cuenta? <a [routerLink]="loginPath">Inicia sesión</a></p>
-    </section>
+    </app-auth-modal>
   `,
 })
 export class RegisterPageComponent {
   private readonly api = inject(AuthApiService);
-  private readonly session = inject(AuthSessionService);
   private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    name: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
-    phone: ['', [Validators.required, Validators.pattern(/^\+?[0-9]{7,15}$/)]],
+    firstName: ['', [Validators.required, Validators.maxLength(49)]],
+    lastName: ['', [Validators.required, Validators.maxLength(49)]],
     address: ['', [Validators.required, Validators.maxLength(255)]],
+    phone: ['', [Validators.required, Validators.pattern(/^\+?[0-9]{7,15}$/)]],
+    email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
   protected readonly loginPath = LOGIN_PATH;
@@ -89,6 +104,10 @@ export class RegisterPageComponent {
     return this.submitted() && this.form.controls[field].invalid;
   }
 
+  protected close(): void {
+    void this.router.navigateByUrl(BILLBOARD_PATH);
+  }
+
   protected submit(): void {
     this.submitted.set(true);
     if (this.form.invalid || this.pending()) {
@@ -96,10 +115,11 @@ export class RegisterPageComponent {
     }
     this.pending.set(true);
     this.failure.set(null);
-    this.api.register(this.form.getRawValue()).subscribe({
-      next: response => {
-        this.session.start(response);
-        void this.router.navigateByUrl(BILLBOARD_PATH);
+    const { firstName, lastName, address, phone, email, password } = this.form.getRawValue();
+    this.api.register({ name: `${firstName.trim()} ${lastName.trim()}`, email, password, phone, address }).subscribe({
+      next: () => {
+        this.toasts.show('Registro exitoso. Ahora inicia sesión con tus datos.', 'success');
+        void this.router.navigateByUrl(LOGIN_PATH, { state: { email } });
       },
       error: err => {
         this.failure.set(asApiError(err).userMessage);
