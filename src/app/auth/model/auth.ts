@@ -5,6 +5,9 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
+  /** Digits with an optional leading "+", 7 to 15 digits. */
+  phone: string;
+  address: string;
 }
 
 export interface LoginRequest {
