@@ -1,21 +1,22 @@
+import { Location } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
-import { FORGOT_PASSWORD_PATH, REGISTER_PATH } from '../auth-paths';
+import { BILLBOARD_PATH, FORGOT_PASSWORD_PATH, REGISTER_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { safeReturnUrl } from '../return-url';
+import { AuthModalComponent } from '../ui/auth-modal.component';
+import { ToastService } from '../ui/toast.service';
 
 @Component({
   selector: 'app-auth-login-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthModalComponent],
   styleUrl: './auth-form.css',
   template: `
-    <section class="auth-card" aria-labelledby="login-title">
-      <h1 id="login-title">Iniciar sesión</h1>
-      <p>Ingresa a tu cuenta de Cinesync.</p>
+    <app-auth-modal title="Iniciar sesión" titleId="login-title" (closed)="close()">
       <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div class="form-group">
           <label for="login-email">Correo electrónico</label>
@@ -38,11 +39,9 @@ import { safeReturnUrl } from '../return-url';
         }
         <button class="btn-primary" type="submit" [disabled]="pending()">Ingresar</button>
       </form>
-      <p class="auth-switch">
-        <a [routerLink]="forgotPasswordPath">¿Olvidaste tu contraseña?</a>
-      </p>
+      <p class="auth-switch"><a [routerLink]="forgotPasswordPath">¿Olvidaste tu contraseña?</a></p>
       <p class="auth-switch">¿Aún no tienes cuenta? <a [routerLink]="registerPath">Regístrate aquí</a></p>
-    </section>
+    </app-auth-modal>
   `,
 })
 export class LoginPageComponent {
@@ -50,9 +49,10 @@ export class LoginPageComponent {
   private readonly session = inject(AuthSessionService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly toasts = inject(ToastService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: [this.emailFromRegistration(), [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
   protected readonly registerPath = REGISTER_PATH;
@@ -65,6 +65,10 @@ export class LoginPageComponent {
     return this.submitted() && this.form.controls[field].invalid;
   }
 
+  protected close(): void {
+    void this.router.navigateByUrl(BILLBOARD_PATH);
+  }
+
   protected submit(): void {
     this.submitted.set(true);
     if (this.form.invalid || this.pending()) {
@@ -75,6 +79,7 @@ export class LoginPageComponent {
     this.api.login(this.form.getRawValue()).subscribe({
       next: response => {
         this.session.start(response);
+        this.toasts.show('Sesión iniciada correctamente.', 'success');
         void this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')));
       },
       error: err => {
@@ -82,5 +87,11 @@ export class LoginPageComponent {
         this.pending.set(false);
       },
     });
+  }
+
+  /** Registration hands the email over in the navigation state, never in the URL. */
+  private emailFromRegistration(): string {
+    const state = inject(Location).getState() as { email?: unknown } | null;
+    return typeof state?.email === 'string' ? state.email : '';
   }
 }
