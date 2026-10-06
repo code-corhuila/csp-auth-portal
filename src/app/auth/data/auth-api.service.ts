@@ -20,12 +20,12 @@ export class AuthApiService {
     const user = this.users.find(u => u.email === request.email && u.password === request.password);
     return user
       ? of(toAuthResponse(user))
-      : throwError(() => apiError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect.'));
+      : throwError(() => apiError(401, 'INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.'));
   }
 
   register(request: RegisterRequest): Observable<AuthResponse> {
     if (this.users.some(u => u.email === request.email)) {
-      return throwError(() => apiError(409, 'EMAIL_ALREADY_REGISTERED', 'This email is already registered.'));
+      return throwError(() => apiError(409, 'EMAIL_ALREADY_REGISTERED', 'Este correo ya está registrado.'));
     }
     const user: SyntheticUser = {
       id: crypto.randomUUID(),
