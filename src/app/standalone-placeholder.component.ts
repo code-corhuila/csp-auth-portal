@@ -5,6 +5,14 @@ import { ActivatedRoute } from '@angular/router';
 @Component({
   selector: 'app-standalone-placeholder',
   standalone: true,
+  styles: `
+    section {
+      padding: 32px 7%;
+    }
+    p {
+      color: #94A3B8;
+    }
+  `,
   template: `
     <section>
       <h1>{{ title }}</h1>
