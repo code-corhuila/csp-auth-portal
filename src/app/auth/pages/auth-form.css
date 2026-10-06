@@ -122,4 +122,10 @@
 .auth-switch a {
   color: var(--color-brand-secondary);
   font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-switch a:hover,
+.auth-switch a:focus-visible {
+  text-decoration: underline;
 }
