@@ -36,8 +36,8 @@ npm test         # Karma + Jasmine
 npm run build
 ```
 
-The portal is a remote of the shell (`csp-front`) and exposes `./routes`. It creates no HTTP client of
-its own: inside the shell it would use the shell's.
+The portal is a remote of the shell (`csp-front`) and exposes `./routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
+signed in). It creates no HTTP client of its own: inside the shell it would use the shell's.
 
 ## Cut 2: synthetic users (HU-FE-AUTH-001)
 
