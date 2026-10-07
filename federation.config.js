@@ -4,6 +4,7 @@ module.exports = withNativeFederation({
   name: 'auth',
   exposes: {
     './routes': './src/app/auth/auth.routes.ts',
+    './session': './src/app/auth/data/session-store.ts',
   },
   shared: {
     ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
