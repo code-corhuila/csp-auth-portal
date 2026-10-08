@@ -39,6 +39,23 @@ npm run build
 The portal is a remote of the shell (`csp-front`) and exposes `./routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
 signed in). It creates no HTTP client of its own: inside the shell it would use the shell's.
 
+## Container
+
+```
+docker network create csp-frontend   # once
+docker compose -f deploy/compose.yml up --build
+```
+
+The image listens on port 4201. The shell loads this portal from another origin, so the container
+renders its CORS rule from the environment when it starts (ADR-026) and refuses to start without it:
+
+| Variable | Meaning | Development value |
+|---|---|---|
+| `CORS_ALLOWED_ORIGIN_REGEX` | Origins allowed to load `remoteEntry.json` and the modules of the portal | `^http://localhost:420[0-5]$` |
+
+`deploy/compose.yml` sets the development value when the variable is not defined. CI builds the image and checks
+that it answers the allowed origin, stays silent for any other, and does not start without the variable.
+
 ## Cut 2: synthetic users (HU-FE-AUTH-001)
 
 There is no `csp-auth-api` in Cut 2. The portal signs in against a dataset burned into
