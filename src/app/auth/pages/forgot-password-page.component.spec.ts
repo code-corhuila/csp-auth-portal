@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { AuthApiService } from '../data/auth-api.service';
 import { ForgotPasswordPageComponent } from './forgot-password-page.component';
 
 describe('ForgotPasswordPageComponent', () => {
@@ -34,5 +35,16 @@ describe('ForgotPasswordPageComponent', () => {
     root.querySelector('form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
     expect(root.querySelector('[role="status"]')!.textContent).toContain('Si la cuenta existe');
+  });
+
+  it('does not send the request while the email is invalid', () => {
+    const fixture = create();
+    const root: HTMLElement = fixture.nativeElement;
+    const api = TestBed.inject(AuthApiService);
+    spyOn(api, 'requestPasswordReset').and.callThrough();
+    root.querySelector('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    expect(api.requestPasswordReset).not.toHaveBeenCalled();
+    expect(root.querySelector('[role="status"]')).toBeNull();
   });
 });
