@@ -6,6 +6,8 @@ All notable changes of `csp-auth-portal` are recorded here. The format follows
 re-applied with `git cherry-pick -x` (numerals 6.2.3, 10 and 11 of the course norm); it reaches `main` by pull request, never by merging `qa`,
 and is tagged `v<version>` once it is merged.
 
+## [Unreleased]
+
 ## [2.0.0] - 2026-10-08
 
 MVP 2 (Cut 2). Story HU-FE-AUTH-001 ([csp-docs#93](https://github.com/code-corhuila/csp-docs/issues/93), story issue
@@ -37,6 +39,7 @@ portal, and the seeded roles drive the access to the protected routes.
 
 ### Known limits
 
+- The guards (`authGuard`, `roleGuard`) and the roles of the session decide only what the interface shows: with no backend they are not a security boundary, since the dataset and the session live in the browser. Real authorization comes with `csp-auth-api`.
 - There is no backend: the dataset (a client and an administrator, with the same fixture password) is burned into the portal and must not
   be deployed to a public environment. It is replaced when `csp-auth-api` is integrated.
 - `deploy/nginx.conf` has no `Content-Security-Policy` or `Strict-Transport-Security` header yet.
