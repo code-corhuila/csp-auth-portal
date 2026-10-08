@@ -36,4 +36,12 @@ describe('ToastService', () => {
     expect(container!.querySelector('.toast-success')!.textContent).toContain('Registro exitoso.');
     expect(container!.querySelector('[role="status"]')).not.toBeNull();
   });
+
+  it('attaches a single container however many messages are shown', () => {
+    toasts.show('Uno');
+    toasts.show('Dos', 'success');
+    TestBed.tick();
+    expect(document.body.querySelectorAll('app-toast-container').length).toBe(1);
+    expect(document.body.querySelectorAll('app-toast-container .toast').length).toBe(2);
+  });
 });
