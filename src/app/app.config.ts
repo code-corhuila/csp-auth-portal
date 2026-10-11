@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { AUTH_ROUTES } from './auth/auth.routes';
+import { STANDALONE_ROUTES } from './standalone.routes';
 
 /**
  * Standalone runs only. Deliberately NO provideHttpClient(): inside the shell the
@@ -10,6 +10,6 @@ import { AUTH_ROUTES } from './auth/auth.routes';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideRouter(AUTH_ROUTES),
+    provideRouter(STANDALONE_ROUTES),
   ],
 };

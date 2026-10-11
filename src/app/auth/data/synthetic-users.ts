@@ -6,6 +6,9 @@ export interface SyntheticUser {
   password: string;
   name: string;
   roles: Role[];
+  /** Only accounts registered at runtime carry them; the seeded users predate the fields. */
+  phone?: string;
+  address?: string;
 }
 
 /** Cut 2 dataset, burned into the portal until csp-auth-api exists. Not real credentials. */

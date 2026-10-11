@@ -12,4 +12,12 @@ describe('AUTH_ROUTES', () => {
     expect(root?.redirectTo).toBe('login');
     expect(root?.pathMatch).toBe('full');
   });
+
+  it('loads the page component of each route on demand', async () => {
+    const loaded = await Promise.all(
+      AUTH_ROUTES.filter(route => route.loadComponent).map(route => route.loadComponent!()),
+    );
+    expect(loaded.length).toBe(3);
+    loaded.forEach(component => expect(component).toBeDefined());
+  });
 });
