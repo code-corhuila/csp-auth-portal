@@ -8,6 +8,10 @@ and is tagged `v<version>` once it is merged.
 
 ## [Unreleased]
 
+### Fixed
+
+- Container healthcheck calls `http://127.0.0.1/health` instead of `http://localhost/health` (`deploy/Dockerfile` and `deploy/compose.yml`): inside the container `localhost` resolves first to `::1`, nginx listens on IPv4 only, and Docker reported the portal as `unhealthy` while it served traffic (TD-025).
+
 ## [2.0.0] - 2026-10-08
 
 MVP 2 (Cut 2). Story HU-FE-AUTH-001 ([csp-docs#93](https://github.com/code-corhuila/csp-docs/issues/93), story issue
