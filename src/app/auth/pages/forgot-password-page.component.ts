@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { asApiError } from '../../shell-contract';
 import { LOGIN_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthModalComponent } from '../ui/auth-modal.component';
@@ -24,6 +25,9 @@ import { AuthModalComponent } from '../ui/auth-modal.component';
         @if (sent()) {
           <p class="form-status" role="status">Si la cuenta existe, enviamos un enlace para restablecer la contraseña.</p>
         }
+        @if (failure(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
         <button class="btn-primary" type="submit" [disabled]="pending()">Enviar enlace</button>
       </form>
       <p class="auth-switch"><a [routerLink]="loginPath">Volver a iniciar sesión</a></p>
@@ -40,6 +44,7 @@ export class ForgotPasswordPageComponent {
   protected readonly loginPath = LOGIN_PATH;
   protected readonly pending = signal(false);
   protected readonly sent = signal(false);
+  protected readonly failure = signal<string | null>(null);
   private readonly submitted = signal(false);
 
   protected invalid(): boolean {
@@ -56,9 +61,16 @@ export class ForgotPasswordPageComponent {
       return;
     }
     this.pending.set(true);
-    this.api.requestPasswordReset(this.form.getRawValue()).subscribe(() => {
-      this.sent.set(true);
-      this.pending.set(false);
+    this.failure.set(null);
+    this.api.requestPasswordReset(this.form.getRawValue()).subscribe({
+      next: () => {
+        this.sent.set(true);
+        this.pending.set(false);
+      },
+      error: err => {
+        this.failure.set(asApiError(err).userMessage);
+        this.pending.set(false);
+      },
     });
   }
 }

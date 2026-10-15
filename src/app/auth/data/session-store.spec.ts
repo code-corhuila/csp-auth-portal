@@ -40,4 +40,12 @@ describe('AuthSessionService', () => {
     session.end();
     expect(session.isAuthenticated()).toBeFalse();
   });
+
+  it('keeps the access token of the session for the shell and forgets it when the session ends', () => {
+    expect(session.accessToken()).toBeNull();
+    session.start(response);
+    expect(session.accessToken()).toBe('token');
+    session.end();
+    expect(session.accessToken()).toBeNull();
+  });
 });
