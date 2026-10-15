@@ -1,11 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { ApiError } from '../../shell-contract';
 import { AuthApiService } from '../data/auth-api.service';
 import { ForgotPasswordPageComponent } from './forgot-password-page.component';
 
 describe('ForgotPasswordPageComponent', () => {
+  const api = { requestPasswordReset: jasmine.createSpy('requestPasswordReset') };
+
   function create() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    api.requestPasswordReset.calls.reset();
+    api.requestPasswordReset.and.returnValue(of(undefined));
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: AuthApiService, useValue: api }] });
     const fixture = TestBed.createComponent(ForgotPasswordPageComponent);
     fixture.detectChanges();
     return fixture;
@@ -40,11 +46,24 @@ describe('ForgotPasswordPageComponent', () => {
   it('does not send the request while the email is invalid', () => {
     const fixture = create();
     const root: HTMLElement = fixture.nativeElement;
-    const api = TestBed.inject(AuthApiService);
-    spyOn(api, 'requestPasswordReset').and.callThrough();
     root.querySelector('form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
     expect(api.requestPasswordReset).not.toHaveBeenCalled();
     expect(root.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('shows the failure and lets the person try again when the request is rejected', () => {
+    const fixture = create();
+    const rejected: ApiError = { status: 429, code: 'X', message: 'x', details: [], traceId: 't', userMessage: 'Too many requests.' };
+    api.requestPasswordReset.and.returnValue(throwError(() => rejected));
+    const root: HTMLElement = fixture.nativeElement;
+    const input = root.querySelector<HTMLInputElement>('#forgot-email')!;
+    input.value = 'maria@cinesync.com';
+    input.dispatchEvent(new Event('input'));
+    root.querySelector('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    expect(root.querySelector('[role="alert"]')!.textContent).toContain('Too many requests.');
+    expect(root.querySelector('[role="status"]')).toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
   });
 });

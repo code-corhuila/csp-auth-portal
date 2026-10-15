@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
 import { AuthApiService } from '../data/auth-api.service';
+import { ApiError } from '../../shell-contract';
 import { AuthSessionService } from '../data/session-store';
-import { SYNTHETIC_USERS } from '../data/synthetic-users';
 import { ToastService } from '../ui/toast.service';
 import { RegisterPageComponent } from './register-page.component';
 
@@ -25,12 +26,21 @@ const valid: Form = {
 };
 
 describe('RegisterPageComponent', () => {
+  const taken: ApiError = {
+    status: 409, code: 'EMAIL_ALREADY_REGISTERED', message: 'x', details: [], traceId: 't', userMessage: 'Este correo ya está registrado.',
+  };
+  const api = {
+    register: (request: { email: string }) =>
+      request.email === 'taken@cinesync.com'
+        ? throwError(() => taken)
+        : of({ accessToken: 'a', refreshToken: 'r', expiresIn: 3600, user: { id: '1', email: request.email, roles: ['CLIENT'] } }),
+  };
   let router: Router;
   let session: AuthSessionService;
   let toasts: ToastService;
 
   function create() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: AuthApiService, useValue: api }] });
     router = TestBed.inject(Router);
     session = TestBed.inject(AuthSessionService);
     toasts = TestBed.inject(ToastService);
@@ -72,10 +82,9 @@ describe('RegisterPageComponent', () => {
 
   it('sends first and last name joined as name, with phone and address', () => {
     const fixture = create();
-    const api = TestBed.inject(AuthApiService);
-    spyOn(api, 'register').and.callThrough();
+    const register = spyOn(TestBed.inject(AuthApiService), 'register').and.callThrough();
     submit(fixture);
-    expect(api.register).toHaveBeenCalledWith({
+    expect(register).toHaveBeenCalledWith({
       name: 'Juan Carlos Pérez Gómez',
       email: 'juan@cinesync.com',
       password: 'SecurePass123!',
@@ -85,7 +94,7 @@ describe('RegisterPageComponent', () => {
   });
 
   it('rejects an email that is already registered and stays open', () => {
-    const root = submit(create(), { email: SYNTHETIC_USERS[0].email });
+    const root = submit(create(), { email: 'taken@cinesync.com' });
     expect(root.querySelector('[role="alert"]')!.textContent).toContain('ya está registrado');
     expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
