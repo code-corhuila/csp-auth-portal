@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { UserSummary } from '../../model/user';
 import { UserPage, UserQuery } from '../model/user-page';
 
 const BASE = '/api/v1/auth/users';
@@ -19,5 +20,14 @@ export class UsersAdminApiService {
       params = params.set('email', query.email);
     }
     return this.http.get<UserPage>(BASE, { params });
+  }
+
+  /** Sets whether the user holds ADMIN. Granting a held role or revoking a missing one is a 200 with no change. */
+  setAdmin(userId: string, enabled: boolean): Observable<UserSummary> {
+    return this.http.patch<UserSummary>(
+      `${BASE}/${encodeURIComponent(userId)}/role`,
+      { role: 'ADMIN', enabled },
+      { headers: { 'Idempotency-Key': crypto.randomUUID() } },
+    );
   }
 }
