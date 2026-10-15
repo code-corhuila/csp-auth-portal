@@ -76,7 +76,7 @@ at `admin/users` (the users page is the empty path) behind `roleGuard`; run alon
 accounts by email prefix (`GET /api/v1/auth/users?email=&page=&limit=`) and grants or revokes `ADMIN` after a confirmation
 (`PATCH /api/v1/auth/users/{userId}/role` with `{ "role": "ADMIN", "enabled": true|false }` and a fresh `Idempotency-Key`). The role is effective on the
 target's next login or token refresh, and the success toast says so. `Revoke` is disabled for the only administrator when the list is the whole directory;
-otherwise the API decides and a `409 LAST_ADMIN` is shown as an error toast. Role changes need the `user:role:update` permission, enforced by the API.
+otherwise the API decides and a `409 LAST_ADMIN` or `409 USER_WITHOUT_ROLES` is shown as an error toast and the list reloads. Role changes need the `user:role:update` permission, enforced by the API.
 
 The session lives in memory (`AuthSessionService`: the user summary and the access token; the refresh token is not kept). `authGuard` sends anonymous visitors to
 `/auth/login?returnUrl=...`; `roleGuard` opens `/admin` only for `ADMIN` and sends any other
