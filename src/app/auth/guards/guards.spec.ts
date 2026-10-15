@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, provideRouter, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { AuthSessionService } from '../data/session-store';
@@ -21,10 +23,12 @@ describe('route guards', () => {
   const state = (url: string) => ({ url }) as RouterStateSnapshot;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
     session = TestBed.inject(AuthSessionService);
     router = TestBed.inject(Router);
   });
+
+  afterEach(() => session.end());
 
   const run = (guard: typeof authGuard, url: string) =>
     TestBed.runInInjectionContext(() => guard(route, state(url)));
