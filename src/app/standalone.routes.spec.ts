@@ -17,12 +17,19 @@ describe('standalone routes', () => {
     session = TestBed.inject(AuthSessionService);
   });
 
+  afterEach(() => session.end());
+
   function signIn(roles: Role[]): void {
     session.start({ accessToken: 't', refreshToken: 'r', expiresIn: 3600, user: { id: '1', email: 'x@cinesync.com', roles } });
   }
 
-  it('opens the login page from the root, under /auth like inside the shell', async () => {
+  it('opens the billboard placeholder from the root, since the login screen needs the shell client', async () => {
     await RouterTestingHarness.create('/');
+    expect(router.url).toBe('/movies');
+  });
+
+  it('keeps the login page under /auth like inside the shell', async () => {
+    await RouterTestingHarness.create('/auth/login');
     expect(router.url).toBe('/auth/login');
   });
 

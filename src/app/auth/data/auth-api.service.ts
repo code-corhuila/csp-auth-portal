@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { ApiError, asApiError } from '../../shell-contract';
-import { AuthResponse, ForgotPasswordRequest, LoginRequest, RegisterRequest } from '../model/auth';
+import { AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest } from '../model/auth';
 
 const BASE = '/api/v1/auth';
 
@@ -19,6 +19,16 @@ export class AuthApiService {
     return this.http.post<AuthResponse>(`${BASE}/login`, request).pipe(
       catchError(err => throwError(() => withMessage(err, loginMessage))),
     );
+  }
+
+  /** The contract rotates the refresh token: the answer carries the new one and the sent one stops working. */
+  refresh(request: RefreshRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${BASE}/refresh`, request);
+  }
+
+  /** Needs the Bearer token, which the shell's interceptor adds; revokes the refresh token sent. */
+  logout(request: LogoutRequest): Observable<void> {
+    return this.http.post<void>(`${BASE}/logout`, request);
   }
 
   register(request: RegisterRequest): Observable<AuthResponse> {
