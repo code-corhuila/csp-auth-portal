@@ -32,6 +32,9 @@ and is tagged `v<version>` once it is merged.
 
 ### Fixed
 
+- The user roles screen (`/admin/users`) is entirely in Spanish: labels, roles (Administrador, Cliente), dialog, toasts, states and `aria` texts. Its failures are
+  explained by status and error code (`admin-error-message.ts`) and never show the English text of the server
+  ([#47](https://github.com/code-corhuila/csp-auth-portal/issues/47)).
 - Container healthcheck calls `http://127.0.0.1/health` instead of `http://localhost/health` (`deploy/Dockerfile` and `deploy/compose.yml`): inside the container `localhost` resolves first to `::1`, nginx listens on IPv4 only, and Docker reported the portal as `unhealthy` while it served traffic (TD-025).
 
 ## [2.0.0] - 2026-10-08
