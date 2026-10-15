@@ -36,10 +36,11 @@ npm test         # Karma + Jasmine
 npm run build
 ```
 
-The portal is a remote of the shell (`csp-front`) and exposes `./routes`, `./admin-routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
-signed in and read `accessToken()` to send the Bearer token). Inside the shell it creates no HTTP client of its own: it uses the shell's, whose interceptor
-adds the gateway URL, the token, the `X-Correlation-Id` and normalises every error (`src/app/shell-contract.ts`). Only the standalone run
-(`app.config.ts`) provides `provideHttpClient()`; with no gateway behind the relative `/api/v1/...` paths, the calls fail there.
+The portal is a remote of the shell (`csp-front`) and exposes `./routes`, `./admin-routes` and `./session` (`AuthSessionService`, so the shell can tell whether a person
+signed in, read `accessToken()` to send the Bearer token, call `restore()` at startup and `signOut()` to leave; see "Session" below). Inside the shell it creates no HTTP client of its own: it uses the shell's, whose interceptor
+adds the gateway URL, the token, the `X-Correlation-Id` and normalises every error (`src/app/shell-contract.ts`). The portal never calls `provideHttpClient()` (Annex H),
+not even in the standalone run (`app.config.ts`): alone, the screens that call the API (login, registration, password recovery, administration) cannot work, so the root
+opens the placeholder billboard. Exercise them through the shell.
 
 ## Container
 
@@ -68,6 +69,23 @@ the portal never compares or stores a password. Sign in and registration need th
 | `login` | Modal. `POST /api/v1/auth/login`; starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
 | `register` | Modal. `POST /api/v1/auth/register` with an `Idempotency-Key`; creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
 | `forgot-password` | Modal. `POST /api/v1/auth/forgot-password`; always confirms neutrally (202), whether or not the account exists |
+
+### Session (restore and renewal)
+
+`AuthSessionService` keeps the user and the access token in memory only. The refresh token is kept in `sessionStorage` (key `csp.auth.refresh`, never `localStorage`,
+so closing the tab ends the session) by `RefreshTokenStore`, which tolerates an unavailable storage and ignores a corrupted value. Tokens are never logged.
+
+| Member | Behaviour |
+|---|---|
+| `restore(): Promise<void>` | The shell calls it after connecting and waits for it before the first navigation. Without a kept token it resolves at once; otherwise it renews with `POST /api/v1/auth/refresh`. It resolves when the attempt finished, whatever the outcome, and never rejects |
+| `refresh(): Promise<void>` | Renews the tokens (the refresh token rotates: the new one is stored). Concurrent callers share one request. Never rejects |
+| automatic renewal | After each `start()` a timer renews the access token 60 s before the `expiresIn` the API returned (at least 5 s from now); `end()` cancels it |
+| `signOut(): Promise<void>` | `POST /api/v1/auth/logout` with the refresh token (the shell's interceptor adds the Bearer), then clears the memory and the storage even if the call fails |
+| `end()` | Clears the memory, the timer and the stored refresh token, without calling the API |
+
+When a renewal fails with `401` or `423` the session ends and the stored token is removed; a transient failure (status `0`, `5xx`, timeout) ends only the in-memory session and keeps the stored
+token, so a reload can retry. A person in an active session is told with a Spanish toast (sign in again, or reload to retry); a failed `restore()` at page load is silent: the guard sends
+the person to `/auth/login?returnUrl=...`.
 
 ### Administration: user roles (`./admin-routes`)
 

@@ -15,6 +15,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RefreshRequest {
+  refreshToken: string;
+}
+
+export interface LogoutRequest {
+  /** Revokes this refresh token. */
+  refreshToken: string;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }

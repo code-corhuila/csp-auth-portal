@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -13,10 +15,12 @@ describe('ADMIN_ROUTES', () => {
   beforeEach(() => {
     const api = { list: () => of({ data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 0 } }) };
     TestBed.configureTestingModule({
-      providers: [provideRouter([{ path: 'users', children: ADMIN_ROUTES }, { path: 'movies', children: [] }, { path: 'auth/login', children: [] }]), { provide: UsersAdminApiService, useValue: api }],
+      providers: [provideRouter([{ path: 'users', children: ADMIN_ROUTES }, { path: 'movies', children: [] }, { path: 'auth/login', children: [] }]), { provide: UsersAdminApiService, useValue: api }, provideHttpClient(), provideHttpClientTesting()],
     });
     session = TestBed.inject(AuthSessionService);
   });
+
+  afterEach(() => session.end());
 
   function signIn(roles: Role[]): void {
     session.start({ accessToken: 't', refreshToken: 'r', expiresIn: 3600, user: { id: '1', email: 'x@cinesync.com', roles } });
