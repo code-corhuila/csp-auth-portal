@@ -37,7 +37,9 @@ npm run build
 ```
 
 The portal is a remote of the shell (`csp-front`) and exposes `./routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
-signed in). It creates no HTTP client of its own: inside the shell it would use the shell's.
+signed in and read `accessToken()` to send the Bearer token). Inside the shell it creates no HTTP client of its own: it uses the shell's, whose interceptor
+adds the gateway URL, the token, the `X-Correlation-Id` and normalises every error (`src/app/shell-contract.ts`). Only the standalone run
+(`app.config.ts`) provides `provideHttpClient()`; with no gateway behind the relative `/api/v1/...` paths, the calls fail there.
 
 ## Container
 
@@ -56,24 +58,17 @@ renders its CORS rule from the environment when it starts (ADR-026) and refuses 
 `deploy/compose.yml` sets the development value when the variable is not defined. CI builds the image and checks
 that it answers the allowed origin, stays silent for any other, and does not start without the variable.
 
-## Cut 2: synthetic users (HU-FE-AUTH-001)
+## Authentication against csp-auth-api (HU-AUTH-003)
 
-There is no `csp-auth-api` in Cut 2. The portal signs in against a dataset burned into
-`src/app/auth/data/synthetic-users.ts`. These are not real credentials.
-
-| Email | Password | Roles |
-|---|---|---|
-| `maria@cinesync.com` | `SecurePass123!` | `CLIENT` |
-| `admin@cinesync.com` | `SecurePass123!` | `CLIENT`, `ADMIN` |
-
-Registering a new account adds a `CLIENT` to the in-memory list; a page reload forgets it.
+The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.5.0). `AuthApiService` is the only class that talks to it;
+the portal never compares or stores a password. Sign in and registration need the API, the gateway and the shell running.
 
 | Route (under `/auth`) | Behaviour |
 |---|---|
-| `login` | Modal. Starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
-| `register` | Modal. Creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
-| `forgot-password` | Modal. Always confirms neutrally, whether or not the account exists |
+| `login` | Modal. `POST /api/v1/auth/login`; starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
+| `register` | Modal. `POST /api/v1/auth/register` with an `Idempotency-Key`; creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
+| `forgot-password` | Modal. `POST /api/v1/auth/forgot-password`; always confirms neutrally (202), whether or not the account exists |
 
-The session lives in memory (`AuthSessionService`). `authGuard` sends anonymous visitors to
+The session lives in memory (`AuthSessionService`: the user summary and the access token; the refresh token is not kept). `authGuard` sends anonymous visitors to
 `/auth/login?returnUrl=...`; `roleGuard` opens `/admin` only for `ADMIN` and sends any other
 session to `/movies`. The look follows `12-ux-ui/design-system.md` of `csp-docs`.
