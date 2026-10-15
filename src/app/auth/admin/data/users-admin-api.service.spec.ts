@@ -38,4 +38,22 @@ describe('UsersAdminApiService', () => {
     expect(request.request.params.has('email')).toBeFalse();
     request.flush({ data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 0 } });
   });
+
+  it('patches the ADMIN role with a fresh Idempotency-Key per call', () => {
+    service.setAdmin(maria.id, true).subscribe();
+    service.setAdmin(maria.id, false).subscribe();
+    const [grant, revoke] = http.match(`/api/v1/auth/users/${maria.id}/role`);
+    expect(grant.request.method).toBe('PATCH');
+    expect(grant.request.body).toEqual({ role: 'ADMIN', enabled: true });
+    expect(revoke.request.body).toEqual({ role: 'ADMIN', enabled: false });
+    expect(grant.request.headers.get('Idempotency-Key')).toBeTruthy();
+    expect(grant.request.headers.get('Idempotency-Key')).not.toBe(revoke.request.headers.get('Idempotency-Key'));
+    grant.flush(maria);
+    revoke.flush(maria);
+  });
+
+  it('encodes the user id in the path', () => {
+    service.setAdmin('a/b', true).subscribe();
+    http.expectOne('/api/v1/auth/users/a%2Fb/role').flush(maria);
+  });
 });
