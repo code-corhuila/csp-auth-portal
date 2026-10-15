@@ -62,6 +62,8 @@
 /* #7C3AED keeps white text above 4.5:1; the glow keeps the brand violet of the design system. */
 .btn-primary { background: #7C3AED; color: #FFFFFF; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); }
 .btn-primary:hover:not(:disabled) { background: var(--color-brand-primary); }
+.btn-danger { background: rgba(239, 68, 68, 0.15); color: #FCA5A5; border-color: #EF4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
+.btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.3); }
 .btn-ghost { background: transparent; color: var(--color-text-primary); border-color: var(--color-border); }
 .btn-ghost:hover:not(:disabled) { background: var(--color-bg-surface-hover); }
 .btn:disabled { opacity: 0.55; box-shadow: none; cursor: not-allowed; }
@@ -94,6 +96,9 @@
   animation: shimmer 1.4s linear infinite;
 }
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+.dialog-text { margin: 0 0 1.25rem; color: var(--color-text-secondary); line-height: 1.5; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 12px; }
 
 @media (max-width: 640px) {
   .data-table thead { display: none; }
