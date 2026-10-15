@@ -1,0 +1,154 @@
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { asApiError } from '../../../shell-contract';
+import { UsersAdminApiService } from '../data/users-admin-api.service';
+import { UserPage } from '../model/user-page';
+
+const PAGE_SIZE = 10;
+
+type Phase = 'loading' | 'ready' | 'failed';
+
+/** The ADMIN screen of 12-ux-ui/wireframes.md section 6: find a user by email prefix. */
+@Component({
+  selector: 'app-admin-users-page',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  styleUrl: './admin-users-page.component.css',
+  template: `
+    <header class="page-header">
+      <h1 class="page-title">User roles</h1>
+      <p class="page-description">Find an account by email and decide who administers Cinesync.</p>
+    </header>
+
+    <form class="search" role="search" (submit)="applySearch($event)">
+      <label for="user-search">Search by email</label>
+      <div class="search-row">
+        <input id="user-search" class="form-input" type="search" maxlength="254" autocomplete="off"
+               placeholder="maria" [formControl]="search" />
+        <button class="btn btn-primary" type="submit" [disabled]="phase() === 'loading'">Search</button>
+      </div>
+    </form>
+
+    <p class="summary" role="status">{{ summary() }}</p>
+
+    @switch (phase()) {
+      @case ('failed') {
+        <div class="state state-error" role="alert">
+          <p>{{ failure() }}</p>
+          <button class="btn btn-ghost" type="button" (click)="load()">Retry</button>
+        </div>
+      }
+      @case ('loading') {
+        <div class="skeletons" aria-hidden="true">
+          @for (row of skeletonRows; track row) {
+            <div class="skeleton"></div>
+          }
+        </div>
+      }
+      @case ('ready') {
+        @if (result()!.data.length) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <caption class="visually-hidden">Users and their roles</caption>
+              <thead>
+                <tr><th scope="col">Email</th><th scope="col">Name</th><th scope="col">Roles</th></tr>
+              </thead>
+              <tbody>
+                @for (user of result()!.data; track user.id) {
+                  <tr>
+                    <td data-label="Email" class="cell-email">{{ user.email }}</td>
+                    <td data-label="Name">{{ user.name || '—' }}</td>
+                    <td data-label="Roles">
+                      @for (role of user.roles; track role) {
+                        <span class="badge badge-{{ role.toLowerCase() }}">{{ role }}</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <nav class="pagination" aria-label="Pagination">
+            <button class="btn btn-ghost" type="button" (click)="goTo(result()!.meta.page - 1)" [disabled]="result()!.meta.page <= 1">Previous</button>
+            <span>Page {{ result()!.meta.page }} of {{ result()!.meta.totalPages }}</span>
+            <button class="btn btn-ghost" type="button" (click)="goTo(result()!.meta.page + 1)" [disabled]="result()!.meta.page >= result()!.meta.totalPages">Next</button>
+          </nav>
+        } @else {
+          <div class="state">
+            @if (applied()) {
+              <p>No users start with '{{ applied() }}'.</p>
+              <button class="btn btn-ghost" type="button" (click)="clearSearch()">Clear search</button>
+            } @else {
+              <p>There are no users yet.</p>
+            }
+          </div>
+        }
+      }
+    }
+  `,
+})
+export class AdminUsersPageComponent implements OnInit {
+  private readonly api = inject(UsersAdminApiService);
+  private request?: Subscription;
+  private pageNumber = 1;
+
+  protected readonly search = new FormControl('', { nonNullable: true });
+  protected readonly phase = signal<Phase>('loading');
+  protected readonly result = signal<UserPage | null>(null);
+  protected readonly failure = signal('');
+  protected readonly applied = signal('');
+  protected readonly skeletonRows = [1, 2, 3, 4, 5];
+
+  protected readonly summary = computed(() => {
+    if (this.phase() === 'loading') {
+      return 'Loading users…';
+    }
+    const total = this.result()?.meta.total ?? 0;
+    return this.phase() === 'ready' ? `${total} ${total === 1 ? 'user' : 'users'} found` : '';
+  });
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.request?.unsubscribe());
+  }
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  protected applySearch(event: Event): void {
+    event.preventDefault();
+    this.runSearch();
+  }
+
+  protected clearSearch(): void {
+    this.search.setValue('');
+    this.runSearch();
+  }
+
+  protected goTo(page: number): void {
+    this.pageNumber = page;
+    this.load();
+  }
+
+  protected load(): void {
+    this.request?.unsubscribe();
+    this.phase.set('loading');
+    this.request = this.api.list({ email: this.applied() || undefined, page: this.pageNumber, limit: PAGE_SIZE }).subscribe({
+      next: result => {
+        this.result.set(result);
+        this.phase.set('ready');
+      },
+      error: err => {
+        this.failure.set(asApiError(err).userMessage);
+        this.phase.set('failed');
+      },
+    });
+  }
+
+  private runSearch(): void {
+    this.applied.set(this.search.value.trim());
+    this.pageNumber = 1;
+    this.load();
+  }
+}

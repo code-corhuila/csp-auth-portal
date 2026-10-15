@@ -36,7 +36,7 @@ npm test         # Karma + Jasmine
 npm run build
 ```
 
-The portal is a remote of the shell (`csp-front`) and exposes `./routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
+The portal is a remote of the shell (`csp-front`) and exposes `./routes`, `./admin-routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
 signed in and read `accessToken()` to send the Bearer token). Inside the shell it creates no HTTP client of its own: it uses the shell's, whose interceptor
 adds the gateway URL, the token, the `X-Correlation-Id` and normalises every error (`src/app/shell-contract.ts`). Only the standalone run
 (`app.config.ts`) provides `provideHttpClient()`; with no gateway behind the relative `/api/v1/...` paths, the calls fail there.
@@ -68,6 +68,13 @@ the portal never compares or stores a password. Sign in and registration need th
 | `login` | Modal. `POST /api/v1/auth/login`; starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
 | `register` | Modal. `POST /api/v1/auth/register` with an `Idempotency-Key`; creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
 | `forgot-password` | Modal. `POST /api/v1/auth/forgot-password`; always confirms neutrally (202), whether or not the account exists |
+
+### Administration: user roles (`./admin-routes`)
+
+The second entry point, `src/app/auth/admin/admin.routes.ts` (`ADMIN_ROUTES`), is the `/admin/users` screen of `12-ux-ui/wireframes.md` section 6. The shell mounts it
+at `admin/users` (the users page is the empty path) behind `roleGuard`; run alone, `standalone.routes.ts` mounts it at the same address. An administrator searches
+accounts by email prefix and pages through them (`GET /api/v1/auth/users?email=&page=&limit=`), with loading, empty and error states. The API enforces the
+permission `user:role:update`.
 
 The session lives in memory (`AuthSessionService`: the user summary and the access token; the refresh token is not kept). `authGuard` sends anonymous visitors to
 `/auth/login?returnUrl=...`; `roleGuard` opens `/admin` only for `ADMIN` and sends any other
