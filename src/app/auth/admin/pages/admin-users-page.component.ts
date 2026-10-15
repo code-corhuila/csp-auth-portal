@@ -10,6 +10,10 @@ import { UserPage } from '../model/user-page';
 
 const PAGE_SIZE = 10;
 const LAST_ADMIN_MESSAGE = 'At least one administrator must remain.';
+const CONFLICT_MESSAGES: Record<string, string> = {
+  LAST_ADMIN: LAST_ADMIN_MESSAGE,
+  USER_WITHOUT_ROLES: 'This user must keep at least one role.',
+};
 const FRESHNESS = 'It takes effect the next time they sign in or their token is refreshed.';
 
 interface RoleChange {
@@ -230,10 +234,10 @@ export class AdminUsersPageComponent implements OnInit {
       },
       error: err => {
         const error = asApiError(err);
-        const lastAdmin = error.code === 'LAST_ADMIN';
-        this.toasts.show(lastAdmin ? LAST_ADMIN_MESSAGE : error.userMessage, 'error');
+        const conflict = CONFLICT_MESSAGES[error.code];
+        this.toasts.show(conflict ?? error.userMessage, 'error');
         this.finish();
-        if (lastAdmin) {
+        if (conflict) {
           this.load();
         }
       },

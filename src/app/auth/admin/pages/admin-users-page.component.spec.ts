@@ -247,6 +247,16 @@ describe('AdminUsersPageComponent', () => {
       expect(lists.length).toBe(2);
     });
 
+    it('shows the missing-role conflict as an error toast and reloads the list', () => {
+      click('tbody tr:nth-child(2) .btn');
+      click('.dialog-actions .btn-danger');
+      patches[0].reply.error(apiError(409, 'USER_WITHOUT_ROLES', 'server text'));
+      fixture.detectChanges();
+      expect(toasts).toHaveBeenCalledWith('This user must keep at least one role.', 'error');
+      expect(el().querySelector('[role="dialog"]')).toBeNull();
+      expect(lists.length).toBe(2);
+    });
+
     it('shows any other failure as an error toast and leaves the row as it was', () => {
       click('tbody tr:first-child .btn');
       click('.dialog-actions .btn-primary');
