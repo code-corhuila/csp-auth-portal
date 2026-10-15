@@ -106,14 +106,20 @@ export class AuthSessionService {
     }
   }
 
-  /** A rejected token (401) or a locked account (423) ends the session for good; anything else may pass. */
+  /**
+   * A rejected token (401) or a locked account (423) ends the session for good; anything else may pass.
+   * Only a person in an active session is told: a failed restore at page load is silent.
+   */
   private handleRenewalFailure(status: number): void {
-    if (status === 401 || status === 423) {
+    const wasActive = this.isAuthenticated();
+    const rejected = status === 401 || status === 423;
+    if (rejected) {
       this.end();
-      this.toasts.show(SESSION_EXPIRED_MESSAGE, 'error');
     } else {
       this.suspend();
-      this.toasts.show(RENEWAL_FAILED_MESSAGE, 'error');
+    }
+    if (wasActive) {
+      this.toasts.show(rejected ? SESSION_EXPIRED_MESSAGE : RENEWAL_FAILED_MESSAGE, 'error');
     }
   }
 

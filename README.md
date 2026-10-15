@@ -83,8 +83,9 @@ so closing the tab ends the session) by `RefreshTokenStore`, which tolerates an 
 | `signOut(): Promise<void>` | `POST /api/v1/auth/logout` with the refresh token (the shell's interceptor adds the Bearer), then clears the memory and the storage even if the call fails |
 | `end()` | Clears the memory, the timer and the stored refresh token, without calling the API |
 
-When a renewal fails with `401` or `423` the session ends, the stored token is removed and a Spanish toast asks the person to sign in again. A transient failure (status `0`,
-`5xx`, timeout) ends only the in-memory session and keeps the stored token, so a reload can retry; the toast says so.
+When a renewal fails with `401` or `423` the session ends and the stored token is removed; a transient failure (status `0`, `5xx`, timeout) ends only the in-memory session and keeps the stored
+token, so a reload can retry. A person in an active session is told with a Spanish toast (sign in again, or reload to retry); a failed `restore()` at page load is silent: the guard sends
+the person to `/auth/login?returnUrl=...`.
 
 ### Administration: user roles (`./admin-routes`)
 
