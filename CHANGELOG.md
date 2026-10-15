@@ -10,6 +10,12 @@ and is tagged `v<version>` once it is merged.
 
 ## [3.0.0] - 2026-10-15
 
+### Added
+
+- `/admin/users` page, exposed to the shell as `./admin-routes` (`ADMIN_ROUTES`, guarded by `roleGuard`): an administrator searches accounts by email
+  prefix and pages through them, with loading, empty and error states (HU-AUTH-003, [#42](https://github.com/code-corhuila/csp-auth-portal/issues/42)).
+- `UsersAdminApiService.list` (`GET /api/v1/auth/users`).
+
 ### Changed
 
 - Sign in, registration and password recovery call `csp-auth-api` through the shell's HTTP client (`POST /api/v1/auth/login`, `/register` with an
