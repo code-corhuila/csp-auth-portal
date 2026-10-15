@@ -108,14 +108,14 @@ describe('AuthSessionService', () => {
       expect(sessionStorage.getItem(KEY)).toBe('refresh-2');
     });
 
-    it('ends the session and removes the token when the API rejects it (401), and does not reject', async () => {
+    it('ends the session silently and removes the token when the API rejects it (401), and does not reject', async () => {
       sessionStorage.setItem(KEY, 'kept');
       const done = session.restore();
       fail(http.expectOne('/api/v1/auth/refresh'), 401);
       await done;
       expect(session.isAuthenticated()).toBeFalse();
       expect(sessionStorage.getItem(KEY)).toBeNull();
-      expect(toasts).toHaveBeenCalledWith('Tu sesión expiró. Inicia sesión de nuevo.', 'error');
+      expect(toasts).not.toHaveBeenCalled();
     });
 
     it('ends the session and removes the token when the account is locked (423)', async () => {
@@ -124,17 +124,18 @@ describe('AuthSessionService', () => {
       fail(http.expectOne('/api/v1/auth/refresh'), 423);
       await done;
       expect(sessionStorage.getItem(KEY)).toBeNull();
+      expect(toasts).not.toHaveBeenCalled();
     });
 
     for (const status of [0, 500, 503]) {
-      it(`keeps the token and warns in Spanish on a transient failure (${status})`, async () => {
+      it(`keeps the token silently on a transient failure at load (${status})`, async () => {
         sessionStorage.setItem(KEY, 'kept');
         const done = session.restore();
         fail(http.expectOne('/api/v1/auth/refresh'), status || 504);
         await done;
         expect(session.isAuthenticated()).toBeFalse();
         expect(sessionStorage.getItem(KEY)).toBe('kept');
-        expect(toasts).toHaveBeenCalledWith(jasmine.stringMatching(/problema de conexión/), 'error');
+        expect(toasts).not.toHaveBeenCalled();
       });
     }
 
@@ -169,6 +170,26 @@ describe('AuthSessionService', () => {
       http.expectOne('/api/v1/auth/refresh').flush(rotated);
       await first;
       expect(session.accessToken()).toBe('token-2');
+    });
+
+    it('tells the person in a session that it expired when the renewal is rejected', async () => {
+      session.start(response);
+      const done = session.refresh();
+      fail(http.expectOne('/api/v1/auth/refresh'), 401);
+      await done;
+      expect(session.isAuthenticated()).toBeFalse();
+      expect(sessionStorage.getItem(KEY)).toBeNull();
+      expect(toasts).toHaveBeenCalledWith('Tu sesión expiró. Inicia sesión de nuevo.', 'error');
+    });
+
+    it('keeps the token and warns in Spanish when the renewal fails by a transient error', async () => {
+      session.start(response);
+      const done = session.refresh();
+      fail(http.expectOne('/api/v1/auth/refresh'), 503);
+      await done;
+      expect(session.isAuthenticated()).toBeFalse();
+      expect(sessionStorage.getItem(KEY)).toBe('refresh');
+      expect(toasts).toHaveBeenCalledWith(jasmine.stringMatching(/problema de conexión/), 'error');
     });
 
     it('renews the access token a minute before it expires, from the expiry the API returned', async () => {

@@ -12,7 +12,7 @@ and is tagged `v<version>` once it is merged.
 
 - The session survives a reload and is renewed: the refresh token is kept in `sessionStorage` (never `localStorage`), `AuthSessionService.restore()` renews the session at startup with
   `POST /api/v1/auth/refresh`, the access token is renewed 60 s before it expires (one request in flight, shared by concurrent callers), the refresh token rotates on every renewal,
-  and `signOut()` revokes it with `POST /api/v1/auth/logout` and clears the storage even if the call fails. A rejected token (`401`, `423`) ends the session; a transient failure keeps the stored token
+  and `signOut()` revokes it with `POST /api/v1/auth/logout` and clears the storage even if the call fails. A rejected token (`401`, `423`) ends the session; a transient failure keeps the stored token; a failed restore at page load is silent and only a failed renewal in an active session shows a toast
   (HU-AUTH-003, [#50](https://github.com/code-corhuila/csp-auth-portal/issues/50)).
 - `RefreshTokenStore` and `AuthApiService.refresh()` / `logout()`.
 - `/admin/users` page, exposed to the shell as `./admin-routes` (`ADMIN_ROUTES`, guarded by `roleGuard`): an administrator searches accounts by email prefix,
