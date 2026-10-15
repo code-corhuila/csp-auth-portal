@@ -8,7 +8,7 @@ import { roleGuard } from '../guards/role.guard';
 export const ADMIN_ROUTES: Routes = [
   {
     path: '',
-    title: 'Administration · User roles',
+    title: 'Administración · Roles de usuarios',
     canActivate: [roleGuard],
     loadComponent: () => import('./pages/admin-users-page.component').then(m => m.AdminUsersPageComponent),
   },

@@ -42,7 +42,7 @@ describe('standalone routes', () => {
     signIn(['CLIENT', 'ADMIN']);
     const harness = await RouterTestingHarness.create('/admin/users');
     expect(router.url).toBe('/admin/users');
-    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('User roles');
+    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('Roles de usuarios');
   });
 
   it('sends a CLIENT-only session from /admin to the billboard', async () => {
