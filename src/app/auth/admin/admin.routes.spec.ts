@@ -25,7 +25,7 @@ describe('ADMIN_ROUTES', () => {
   it('renders the users page for an ADMIN at the empty path', async () => {
     signIn(['CLIENT', 'ADMIN']);
     const harness = await RouterTestingHarness.create('/users');
-    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('User roles');
+    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('Roles de usuarios');
   });
 
   it('sends a CLIENT-only session to the billboard', async () => {
@@ -40,6 +40,6 @@ describe('ADMIN_ROUTES', () => {
   });
 
   it('titles the page', () => {
-    expect(ADMIN_ROUTES[0].title).toBe('Administration · User roles');
+    expect(ADMIN_ROUTES[0].title).toBe('Administración · Roles de usuarios');
   });
 });
