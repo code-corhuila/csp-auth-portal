@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -10,7 +12,7 @@ describe('standalone routes', () => {
   let session: AuthSessionService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter(STANDALONE_ROUTES)] });
+    TestBed.configureTestingModule({ providers: [provideRouter(STANDALONE_ROUTES), provideHttpClient(), provideHttpClientTesting()] });
     router = TestBed.inject(Router);
     session = TestBed.inject(AuthSessionService);
   });
@@ -34,6 +36,13 @@ describe('standalone routes', () => {
     signIn(['CLIENT', 'ADMIN']);
     await RouterTestingHarness.create('/admin');
     expect(router.url).toBe('/admin');
+  });
+
+  it('opens the user roles page at /admin/users for the ADMIN session', async () => {
+    signIn(['CLIENT', 'ADMIN']);
+    const harness = await RouterTestingHarness.create('/admin/users');
+    expect(router.url).toBe('/admin/users');
+    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('User roles');
   });
 
   it('sends a CLIENT-only session from /admin to the billboard', async () => {
