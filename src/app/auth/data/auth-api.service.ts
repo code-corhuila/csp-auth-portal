@@ -2,12 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { ApiError, asApiError } from '../../shell-contract';
-import { AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest } from '../model/auth';
+import { AuthResponse, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest } from '../model/auth';
 
 const BASE = '/api/v1/auth';
 
 /**
- * Typed calls to csp-auth-api (auth-service 1.5.0). The injected HttpClient is the SHELL's:
+ * Typed calls to csp-auth-api (auth-service 1.6.0). The injected HttpClient is the SHELL's:
  * its interceptor completes the '/api/v1/...' path, attaches the correlation id and
  * normalises every error. The portal never compares or keeps a password.
  */
@@ -42,6 +42,16 @@ export class AuthApiService {
   /** The contract answers 202 whether or not the account exists. */
   requestPasswordReset(request: ForgotPasswordRequest): Observable<void> {
     return this.http.post<void>(`${BASE}/forgot-password`, request);
+  }
+
+  /** Needs the Bearer token. The contract answers 202 with no body; the code goes to the new address, never to this response. */
+  requestEmailChange(request: EmailChangeRequest): Observable<void> {
+    return this.http.patch<void>(`${BASE}/me/email`, request);
+  }
+
+  /** Needs the Bearer token. 204 when the code confirms the pending change; every cause of an invalid code is the same 400. */
+  verifyEmailChange(request: EmailVerificationRequest): Observable<void> {
+    return this.http.post<void>(`${BASE}/me/email/verify`, request);
   }
 }
 
