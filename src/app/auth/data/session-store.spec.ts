@@ -247,6 +247,20 @@ describe('AuthSessionService', () => {
     });
   });
 
+  describe('updateEmail', () => {
+    it('replaces the email of the signed-in user and keeps the rest', () => {
+      session.start(response);
+      session.updateEmail('new@cinesync.com');
+      expect(session.user()).toEqual({ ...response.user, email: 'new@cinesync.com' });
+      expect(session.accessToken()).toBe('token');
+    });
+
+    it('does nothing without a session', () => {
+      session.updateEmail('new@cinesync.com');
+      expect(session.user()).toBeNull();
+    });
+  });
+
   describe('signOut', () => {
     it('revokes the refresh token and clears the session', async () => {
       session.start(response);

@@ -79,6 +79,11 @@ export class AuthSessionService {
     }
   }
 
+  /** Shows the confirmed address after an email change; the tokens do not carry the email, so the session keeps working. */
+  updateEmail(email: string): void {
+    this.current.update(user => (user === null ? user : { ...user, email }));
+  }
+
   hasRole(role: Role): boolean {
     return this.current()?.roles.includes(role) ?? false;
   }
