@@ -27,6 +27,8 @@ describe('LoginPageComponent', () => {
   let session: AuthSessionService;
   let toasts: ToastService;
 
+  afterEach(() => session.end());
+
   function create(options: { returnUrl?: string; state?: object } = {}) {
     TestBed.configureTestingModule({
       providers: [

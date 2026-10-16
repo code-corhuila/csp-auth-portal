@@ -73,6 +73,26 @@ describe('AuthApiService', () => {
     expect(caught?.userMessage).toBe('shell message');
   });
 
+  it('posts the refresh token to /refresh and returns the rotated tokens', () => {
+    let received: AuthResponse | undefined;
+    service.refresh({ refreshToken: 'refresh' }).subscribe(r => (received = r));
+    const request = http.expectOne('/api/v1/auth/refresh');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ refreshToken: 'refresh' });
+    request.flush(response);
+    expect(received).toEqual(response);
+  });
+
+  it('posts the refresh token to /logout to revoke it', () => {
+    let completed = false;
+    service.logout({ refreshToken: 'refresh' }).subscribe({ complete: () => (completed = true) });
+    const request = http.expectOne('/api/v1/auth/logout');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ refreshToken: 'refresh' });
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    expect(completed).toBeTrue();
+  });
+
   it('posts the registration with a fresh Idempotency-Key per call', () => {
     service.register(registration).subscribe();
     service.register(registration).subscribe();
