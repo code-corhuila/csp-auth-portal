@@ -18,7 +18,7 @@ import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
   `,
   template: `
     <section class="profile">
-      <h1>Mi perfil</h1>
+      <h1 #heading tabindex="-1">Mi perfil</h1>
       <p>Correo actual: <strong>{{ session.user()?.email }}</strong></p>
 
       @if (step() === 'request') {
@@ -26,7 +26,7 @@ import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
           <div class="form-group">
             <label for="profile-email">Nuevo correo electrónico</label>
             <input id="profile-email" class="form-input" type="email" autocomplete="email" placeholder="usuario@cinesync.com"
-                   formControlName="email" [attr.aria-describedby]="emailInvalid() ? 'profile-email-error' : null" />
+                   formControlName="email" [attr.aria-describedby]="describedBy(emailInvalid(), 'profile-email-error')" />
             @if (emailInvalid()) {
               <span id="profile-email-error" class="field-error">Ingresa un correo válido.</span>
             }
@@ -39,18 +39,18 @@ import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
           <div class="form-group">
             <label for="profile-code">Código de verificación</label>
             <input #codeInput id="profile-code" class="form-input" type="text" inputmode="numeric" autocomplete="one-time-code"
-                   maxlength="6" formControlName="verificationCode" [attr.aria-describedby]="codeInvalid() ? 'profile-code-error' : null" />
+                   maxlength="6" formControlName="verificationCode" [attr.aria-describedby]="describedBy(codeInvalid(), 'profile-code-error')" />
             @if (codeInvalid()) {
               <span id="profile-code-error" class="field-error">El código tiene 6 dígitos.</span>
             }
           </div>
           <button class="btn-primary" type="submit" [disabled]="pending()">Verificar correo</button>
         </form>
-        <p class="auth-switch"><button type="button" (click)="restart()">Solicitar un código nuevo</button></p>
+        <p class="auth-switch"><button type="button" (click)="restart()">Volver a pedir un código</button></p>
       }
 
       @if (failure(); as message) {
-        <p class="form-error" role="alert">{{ message }}</p>
+        <p id="profile-failure" class="form-error" role="alert">{{ message }}</p>
       }
     </section>
   `,
@@ -61,6 +61,7 @@ export class ProfilePageComponent {
   private readonly injector = inject(Injector);
   private readonly forms = inject(FormBuilder).nonNullable;
   private readonly codeInput = viewChild<ElementRef<HTMLInputElement>>('codeInput');
+  private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly submitted = signal(false);
 
   protected readonly session = inject(AuthSessionService);
@@ -77,6 +78,10 @@ export class ProfilePageComponent {
 
   protected codeInvalid(): boolean {
     return this.submitted() && this.codeForm.invalid;
+  }
+
+  protected describedBy(invalid: boolean, fieldError: string): string | null {
+    return [invalid ? fieldError : null, this.failure() ? 'profile-failure' : null].filter(Boolean).join(' ') || null;
   }
 
   protected requestCode(): void {
@@ -108,13 +113,16 @@ export class ProfilePageComponent {
         this.session.updateEmail(this.pendingEmail());
         this.toasts.show(`Tu correo se actualizó a ${this.pendingEmail()}.`, 'success');
         this.emailForm.reset();
+        this.codeForm.reset();
         this.moveTo('request');
+        afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
       },
       error: err => this.fail(err, 'verify'),
     });
   }
 
   protected restart(): void {
+    this.codeForm.reset();
     this.moveTo('request');
   }
 
