@@ -8,6 +8,19 @@ and is tagged `v<version>` once it is merged.
 
 ## [Unreleased]
 
+### Changed
+
+- Sign in, registration and password recovery call `csp-auth-api` through the shell's HTTP client (`POST /api/v1/auth/login`, `/register` with an
+  `Idempotency-Key`, `/forgot-password`) instead of answering from a dataset; the portal no longer compares or stores a password
+  (HU-AUTH-003, [#39](https://github.com/code-corhuila/csp-auth-portal/issues/39)).
+- `AuthSessionService` keeps the access token in memory and exposes it through `./session` as `accessToken()`, so the shell can send the Bearer token.
+- The password recovery page shows the failure (for example `429`) instead of staying blocked.
+- The standalone configuration provides `provideHttpClient()`; inside the shell the portal still uses the shell's client.
+
+### Removed
+
+- `synthetic-users.ts` and the synthetic dataset: nothing else used it. The specs build their sessions from fixtures.
+
 ### Fixed
 
 - Container healthcheck calls `http://127.0.0.1/health` instead of `http://localhost/health` (`deploy/Dockerfile` and `deploy/compose.yml`): inside the container `localhost` resolves first to `::1`, nginx listens on IPv4 only, and Docker reported the portal as `unhealthy` while it served traffic (TD-025).
