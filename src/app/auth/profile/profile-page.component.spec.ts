@@ -85,7 +85,7 @@ describe('ProfilePageComponent', () => {
     expect(root.querySelector('.field-error')!.textContent).toContain('6 dígitos');
   });
 
-  it('verifies the code as a string, keeping leading zeros, then shows the confirmed email', () => {
+  it('verifies the code as a string, keeping leading zeros, then shows the confirmed email', async () => {
     const { fixture, root, requestCode, type, submit } = create();
     requestCode();
     type('#profile-code', '004217');
@@ -97,6 +97,9 @@ describe('ProfilePageComponent', () => {
     expect(root.textContent).toContain('new@cinesync.com');
     expect(root.querySelector('#profile-code')).toBeNull();
     expect(root.querySelector<HTMLInputElement>('#profile-email')!.value).toBe('');
+    expect(fixture.componentInstance['codeForm'].getRawValue().verificationCode).toBe('');
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(root.querySelector('h1'));
   });
 
   it('keeps the code step after a rejected code and offers a new one', () => {
@@ -106,12 +109,14 @@ describe('ProfilePageComponent', () => {
     type('#profile-code', '111111');
     submit();
     expect(root.querySelector('[role="alert"]')!.textContent).toContain('no es válido o ya venció');
+    expect(root.querySelector('#profile-code')!.getAttribute('aria-describedby')).toBe('profile-failure');
     expect(session.user()!.email).toBe('old@cinesync.com');
-    const again = Array.from(root.querySelectorAll('button')).find(b => b.textContent!.includes('Solicitar un código nuevo'))!;
+    const again = Array.from(root.querySelectorAll('button')).find(b => b.textContent!.includes('Volver a pedir un código'))!;
     again.click();
     fixture.detectChanges();
     expect(root.querySelector('#profile-code')).toBeNull();
     expect(root.querySelector('#profile-email')).not.toBeNull();
+    expect(fixture.componentInstance['codeForm'].getRawValue().verificationCode).toBe('');
     expect(root.querySelector('[role="alert"]')).toBeNull();
   });
 

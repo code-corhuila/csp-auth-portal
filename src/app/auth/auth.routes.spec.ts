@@ -14,6 +14,10 @@ describe('AUTH_ROUTES', () => {
     expect(paths).toEqual(jasmine.arrayContaining(['login', 'register', 'forgot-password', 'profile']));
   });
 
+  it('titles the profile route in UTF-8 Spanish', () => {
+    expect(AUTH_ROUTES.find(route => route.path === 'profile')?.title).toBe('Mi perfil · Cambiar correo');
+  });
+
   it('redirects the empty path to login', () => {
     const root = AUTH_ROUTES.find(route => route.path === '');
     expect(root?.redirectTo).toBe('login');
