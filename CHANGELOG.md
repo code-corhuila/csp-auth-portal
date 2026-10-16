@@ -10,9 +10,12 @@ and is tagged `v<version>` once it is merged.
 
 ### Added
 
-- `/admin/users` page, exposed to the shell as `./admin-routes` (`ADMIN_ROUTES`, guarded by `roleGuard`): an administrator searches accounts by email
-  prefix and pages through them, with loading, empty and error states (HU-AUTH-003, [#42](https://github.com/code-corhuila/csp-auth-portal/issues/42)).
-- `UsersAdminApiService.list` (`GET /api/v1/auth/users`).
+- `/admin/users` page, exposed to the shell as `./admin-routes` (`ADMIN_ROUTES`, guarded by `roleGuard`): an administrator searches accounts by email prefix,
+  pages through them and grants or revokes `ADMIN` after a confirmation dialog. Loading, empty and error states; the last-administrator conflict
+  (`409 LAST_ADMIN`) and a user left without roles (`409 USER_WITHOUT_ROLES`) are error toasts; the success toast states that the role takes effect at the next login or token refresh
+  (HU-AUTH-003, [#42](https://github.com/code-corhuila/csp-auth-portal/issues/42)).
+- `UsersAdminApiService` (`GET /api/v1/auth/users`, `PATCH /api/v1/auth/users/{userId}/role` with an `Idempotency-Key`) and the toast type `error`.
+- `AuthModalComponent` accepts `closeLabel` and focuses the element marked `data-initial-focus` before the first field.
 
 ### Changed
 
@@ -29,6 +32,9 @@ and is tagged `v<version>` once it is merged.
 
 ### Fixed
 
+- The user roles screen (`/admin/users`) is entirely in Spanish: labels, roles (Administrador, Cliente), dialog, toasts, states and `aria` texts. Its failures are
+  explained by status and error code (`admin-error-message.ts`) and never show the English text of the server
+  ([#47](https://github.com/code-corhuila/csp-auth-portal/issues/47)).
 - Container healthcheck calls `http://127.0.0.1/health` instead of `http://localhost/health` (`deploy/Dockerfile` and `deploy/compose.yml`): inside the container `localhost` resolves first to `::1`, nginx listens on IPv4 only, and Docker reported the portal as `unhealthy` while it served traffic (TD-025).
 
 ## [2.0.0] - 2026-10-08
