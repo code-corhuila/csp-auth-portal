@@ -133,4 +133,31 @@ describe('AuthApiService', () => {
     request.flush(null, { status: 202, statusText: 'Accepted' });
     expect(completed).toBeTrue();
   });
+
+  it('patches the new email to /me/email and completes on 202', () => {
+    let completed = false;
+    service.requestEmailChange({ email: 'new@cinesync.com' }).subscribe({ complete: () => (completed = true) });
+    const request = http.expectOne('/api/v1/auth/me/email');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ email: 'new@cinesync.com' });
+    request.flush(null, { status: 202, statusText: 'Accepted' });
+    expect(completed).toBeTrue();
+  });
+
+  it('posts the code as a string to /me/email/verify and completes on 204', () => {
+    let completed = false;
+    service.verifyEmailChange({ verificationCode: '004217' }).subscribe({ complete: () => (completed = true) });
+    const request = http.expectOne('/api/v1/auth/me/email/verify');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ verificationCode: '004217' });
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    expect(completed).toBeTrue();
+  });
+
+  it('passes the shell error of the email change through untouched', () => {
+    let caught: ApiError | undefined;
+    service.requestEmailChange({ email: 'taken@cinesync.com' }).subscribe({ error: e => (caught = e) });
+    http.expectOne('/api/v1/auth/me/email').flush(shellError(409, 'EMAIL_ALREADY_REGISTERED'), { status: 409, statusText: 'Conflict' });
+    expect(caught?.code).toBe('EMAIL_ALREADY_REGISTERED');
+  });
 });
