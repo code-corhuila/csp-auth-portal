@@ -50,14 +50,14 @@ docker compose -f deploy/compose.yml up --build
 ```
 
 The image listens on port 4201. The shell loads this portal from another origin, so the container
-renders its CORS rule from the environment when it starts (ADR-026) and refuses to start without it:
+renders its CORS rule from the environment when it starts (ADR-026) and refuses to start without it, or when the value does not start with `^` and end with `$` (an unanchored regex would also allow longer origins):
 
 | Variable | Meaning | Development value |
 |---|---|---|
 | `CORS_ALLOWED_ORIGIN_REGEX` | Origins allowed to load `remoteEntry.json` and the modules of the portal | `^http://localhost:420[0-5]$` |
 
 `deploy/compose.yml` sets the development value when the variable is not defined. CI builds the image and checks
-that it answers the allowed origin, stays silent for any other, and does not start without the variable.
+that it answers the allowed origin, stays silent for any other, and does not start with an empty or an unanchored value.
 
 ## Authentication against csp-auth-api (HU-AUTH-003)
 
