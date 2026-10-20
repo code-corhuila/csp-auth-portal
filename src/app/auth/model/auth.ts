@@ -35,3 +35,12 @@ export interface AuthResponse {
   expiresIn: number;
   user: UserSummary;
 }
+
+export interface EmailChangeRequest {
+  email: string;
+}
+
+export interface EmailVerificationRequest {
+  /** Exactly six digits, leading zeros included, so it is always a string. */
+  verificationCode: string;
+}
