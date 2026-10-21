@@ -27,6 +27,10 @@ and is tagged `v<version>` once it is merged.
 - `UsersAdminApiService` (`GET /api/v1/auth/users`, `PATCH /api/v1/auth/users/{userId}/role` with an `Idempotency-Key`) and the toast type `error`.
 - `AuthModalComponent` accepts `closeLabel` and focuses the element marked `data-initial-focus` before the first field.
 
+### Fixed
+
+- Login shows a Spanish message when the API limits failed attempts (`429`, `RATE_LIMITED` or the gateway's `TOO_MANY_REQUESTS`): "Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos." The shell's `ApiError` does not expose `Retry-After`, so the message carries no time (HU-AUTH-005, [#63](https://github.com/code-corhuila/csp-auth-portal/issues/63)).
+
 ### Changed
 
 - The container refuses to start when `CORS_ALLOWED_ORIGIN_REGEX` does not start with `^` and end with `$`, the CI checks an empty and two unanchored values, and the `.json` location serves `remoteEntry.json` only, not `importmap.json` (ADR-026 Amendment 2026-10-19, [#58](https://github.com/code-corhuila/csp-auth-portal/issues/58)).

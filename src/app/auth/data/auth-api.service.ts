@@ -64,7 +64,10 @@ function loginMessage(error: ApiError): string | undefined {
   if (error.status === 401) {
     return 'Correo o contraseña incorrectos.';
   }
-  return error.status === 423 ? 'Tu cuenta está bloqueada temporalmente. Inténtalo más tarde.' : undefined;
+  if (error.status === 423) {
+    return 'Tu cuenta está bloqueada temporalmente. Inténtalo más tarde.';
+  }
+  return error.status === 429 ? 'Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos.' : undefined;
 }
 
 function registerMessage(error: ApiError): string | undefined {
