@@ -29,6 +29,7 @@ and is tagged `v<version>` once it is merged.
 
 ### Changed
 
+- The container refuses to start when `CORS_ALLOWED_ORIGIN_REGEX` does not start with `^` and end with `$`, the CI checks an empty and two unanchored values, and the `.json` location serves `remoteEntry.json` only, not `importmap.json` (ADR-026 Amendment 2026-10-19, [#58](https://github.com/code-corhuila/csp-auth-portal/issues/58)).
 - `AuthSessionService` no longer is "memory only": it keeps the refresh token in `sessionStorage`; the access token stays in memory
   ([#50](https://github.com/code-corhuila/csp-auth-portal/issues/50)).
 - The standalone configuration no longer provides `provideHttpClient()` (Annex H, as the catalog and booking portals); the standalone root opens the placeholder billboard because the screens
