@@ -10,6 +10,11 @@ and is tagged `v<version>` once it is merged.
 
 ### Added
 
+- `/auth/profile` page (any signed-in role, behind `authGuard`): shows the current email and changes it in two steps, a form that requests the change (`PATCH /api/v1/auth/me/email`, `202`) and a
+  6-digit code form that confirms it (`POST /api/v1/auth/me/email/verify`, `204`). The code is a string (leading zeros kept), is never logged or stored, and takes the focus after the request.
+  Every cause of an invalid code shows one generic Spanish message with an option to request a new code; `409` (address in use, also at the confirmation), `429`, `401` and network failures are
+  mapped to Spanish messages (`profile-error-message.ts`); the success toast and the displayed email use the confirmed address (HU-AUTH-004, [#56](https://github.com/code-corhuila/csp-auth-portal/issues/56)).
+- `AuthApiService.requestEmailChange()` / `verifyEmailChange()` and `AuthSessionService.updateEmail()`.
 - The session survives a reload and is renewed: the refresh token is kept in `sessionStorage` (never `localStorage`), `AuthSessionService.restore()` renews the session at startup with
   `POST /api/v1/auth/refresh`, the access token is renewed 60 s before it expires (one request in flight, shared by concurrent callers), the refresh token rotates on every renewal,
   and `signOut()` revokes it with `POST /api/v1/auth/logout` and clears the storage even if the call fails. A rejected token (`401`, `423`) ends the session; a transient failure keeps the stored token; a failed restore at page load is silent and only a failed renewal in an active session shows a toast

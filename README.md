@@ -61,7 +61,7 @@ that it answers the allowed origin, stays silent for any other, and does not sta
 
 ## Authentication against csp-auth-api (HU-AUTH-003)
 
-The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.5.0). `AuthApiService` is the only class that talks to it;
+The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.6.0). `AuthApiService` is the only class that talks to it;
 the portal never compares or stores a password. Sign in and registration need the API, the gateway and the shell running.
 
 | Route (under `/auth`) | Behaviour |
@@ -69,6 +69,7 @@ the portal never compares or stores a password. Sign in and registration need th
 | `login` | Modal. `POST /api/v1/auth/login`; starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
 | `register` | Modal. `POST /api/v1/auth/register` with an `Idempotency-Key`; creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
 | `forgot-password` | Modal. `POST /api/v1/auth/forgot-password`; always confirms neutrally (202), whether or not the account exists |
+| `profile` | Page for any signed-in role (`authGuard`). Shows the current email; `PATCH /api/v1/auth/me/email` requests a change and `POST /api/v1/auth/me/email/verify` confirms it with the 6-digit code (HU-AUTH-004, ADR-034) |
 
 ### Session (restore and renewal)
 
