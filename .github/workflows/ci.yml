@@ -13,6 +13,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: code-corhuila/csp-docs
+          ref: main
+          path: csp-docs
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -22,6 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Check the requests table against the auth contract
+        run: AUTH_CONTRACT_FILE="$PWD/csp-docs/07-api/contracts/openapi/auth-service.yaml" npm run test:contract
 
       - name: Build
         run: npm run build
