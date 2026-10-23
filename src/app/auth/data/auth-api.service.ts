@@ -44,14 +44,24 @@ export class AuthApiService {
     return this.http.post<void>(`${BASE}/forgot-password`, request);
   }
 
-  /** Needs the Bearer token. The contract answers 202 with no body; the code goes to the new address, never to this response. */
+  /**
+   * Needs the Bearer token and a fresh Idempotency-Key, which the contract requires and the API validates (8 to 128 characters).
+   * The contract answers 202 with no body; the code goes to the new address, never to this response.
+   */
   requestEmailChange(request: EmailChangeRequest): Observable<void> {
-    return this.http.patch<void>(`${BASE}/me/email`, request);
+    return this.http.patch<void>(`${BASE}/me/email`, request, {
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
   }
 
-  /** Needs the Bearer token. 204 when the code confirms the pending change; every cause of an invalid code is the same 400. */
+  /**
+   * Needs the Bearer token and a fresh Idempotency-Key (required by the contract). 204 when the code confirms the pending change;
+   * every cause of an invalid code is the same 400.
+   */
   verifyEmailChange(request: EmailVerificationRequest): Observable<void> {
-    return this.http.post<void>(`${BASE}/me/email/verify`, request);
+    return this.http.post<void>(`${BASE}/me/email/verify`, request, {
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
   }
 }
 

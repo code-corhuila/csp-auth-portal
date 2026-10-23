@@ -164,6 +164,20 @@ describe('AuthApiService', () => {
     expect(completed).toBeTrue();
   });
 
+  it('sends a fresh Idempotency-Key of 8 to 128 characters on both email change calls, as the contract requires', () => {
+    service.requestEmailChange({ email: 'new@cinesync.com' }).subscribe();
+    service.requestEmailChange({ email: 'new@cinesync.com' }).subscribe();
+    service.verifyEmailChange({ verificationCode: '004217' }).subscribe();
+    const [firstRequest, secondRequest] = http.match('/api/v1/auth/me/email');
+    const verification = http.expectOne('/api/v1/auth/me/email/verify');
+    const keys = [firstRequest, secondRequest, verification].map(call => call.request.headers.get('Idempotency-Key') ?? '');
+    for (const key of keys) {
+      expect(key.length).toBeGreaterThanOrEqual(8);
+      expect(key.length).toBeLessThanOrEqual(128);
+    }
+    expect(new Set(keys).size).toBe(3);
+  });
+
   it('passes the shell error of the email change through untouched', () => {
     let caught: ApiError | undefined;
     service.requestEmailChange({ email: 'taken@cinesync.com' }).subscribe({ error: e => (caught = e) });
