@@ -27,6 +27,10 @@ and is tagged `v<version>` once it is merged.
 - `UsersAdminApiService` (`GET /api/v1/auth/users`, `PATCH /api/v1/auth/users/{userId}/role` with an `Idempotency-Key`) and the toast type `error`.
 - `AuthModalComponent` accepts `closeLabel` and focuses the element marked `data-initial-focus` before the first field.
 
+### Fixed
+
+- The email change sends the `Idempotency-Key` header that the contract requires on `PATCH /api/v1/auth/me/email` and `POST /api/v1/auth/me/email/verify`: the API answers `400` without it, so the profile page could not change an email (HU-AUTH-004, [#65](https://github.com/code-corhuila/csp-auth-portal/issues/65)).
+
 ### Changed
 
 - The container refuses to start when `CORS_ALLOWED_ORIGIN_REGEX` does not start with `^` and end with `$`, the CI checks an empty and two unanchored values, and the `.json` location serves `remoteEntry.json` only, not `importmap.json` (ADR-026 Amendment 2026-10-19, [#58](https://github.com/code-corhuila/csp-auth-portal/issues/58)).
