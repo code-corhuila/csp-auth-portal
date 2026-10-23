@@ -29,6 +29,7 @@ and is tagged `v<version>` once it is merged.
 
 ### Fixed
 
+- A contract check keeps the requests of the portal equal to what `auth-service.yaml` requires: `src/contract/auth-service.requirements.json` lists the operations the portal calls and their required headers, `scripts/check-contract.mjs` (`npm run test:contract`, with `AUTH_CONTRACT_FILE`) compares that table with the contract in CI, and `auth-api.contract.spec.ts` makes every call and checks the headers, which would have caught the missing `Idempotency-Key` of the email change (HU-AUTH-004, [#68](https://github.com/code-corhuila/csp-auth-portal/issues/68)).
 - Login shows a Spanish message when the API limits failed attempts (`429`, `RATE_LIMITED` or the gateway's `TOO_MANY_REQUESTS`): "Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos." The shell's `ApiError` does not expose `Retry-After`, so the message carries no time (HU-AUTH-005, [#63](https://github.com/code-corhuila/csp-auth-portal/issues/63)).
 - The email change sends the `Idempotency-Key` header that the contract requires on `PATCH /api/v1/auth/me/email` and `POST /api/v1/auth/me/email/verify`: the API answers `400` without it, so the profile page could not change an email (HU-AUTH-004, [#65](https://github.com/code-corhuila/csp-auth-portal/issues/65)).
 

@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "lint": "ng lint",
-    "test": "ng test --watch=false"
+    "test": "ng test --watch=false",
+    "test:contract": "node scripts/check-contract.mjs"
   },
   "dependencies": {
     "@angular-architects/native-federation": "^21.2.0",
