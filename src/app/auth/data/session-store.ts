@@ -65,17 +65,20 @@ export class AuthSessionService {
     return this.pending;
   }
 
-  /** Revokes the refresh token in the API and ends the session even if that call fails. */
+  /**
+   * Revokes the refresh token in the API and ends the session even if that call fails. The request is sent
+   * (with the access token still set) and the session is forgotten right after, without waiting for the
+   * answer: if the page is left meanwhile the browser cancels the request, and a refresh token still stored
+   * would restore the session on the next load.
+   */
   async signOut(): Promise<void> {
     const refreshToken = this.refreshTokens.read();
+    const revocation = refreshToken === null ? null : firstValueFrom(this.api.logout({ refreshToken }));
+    this.end();
     try {
-      if (refreshToken !== null) {
-        await firstValueFrom(this.api.logout({ refreshToken }));
-      }
+      await revocation;
     } catch {
       // The person is leaving: a failed revocation must not keep the session open on this device.
-    } finally {
-      this.end();
     }
   }
 

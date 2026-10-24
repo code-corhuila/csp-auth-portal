@@ -186,6 +186,12 @@ describe('AdminUsersPageComponent', () => {
       expect(el().querySelector('.auth-close')!.getAttribute('aria-label')).toBe('Cerrar');
     });
 
+    it('tells the person that removing ADMIN ends the session of that user at once', () => {
+      click('tbody tr:nth-child(2) .btn');
+      expect(text('.dialog-text')).toBe('Esta cuenta perderá su acceso de administración y su sesión se cerrará: tendrá que iniciar sesión de nuevo.');
+      expect(text('.dialog-text')).not.toContain('próxima vez');
+    });
+
     it('grants ADMIN, updates the row, confirms with a success toast and returns the focus', () => {
       const trigger = rowButton(0);
       click('tbody tr:first-child .btn');
@@ -213,7 +219,9 @@ describe('AdminUsersPageComponent', () => {
       expect(patches[0].enabled).toBeFalse();
       patches[0].reply.next({ ...lopez, roles: ['CLIENT'] });
       fixture.detectChanges();
-      expect(toasts.calls.mostRecent().args[0]).toContain('Rol de administrador retirado a maria.lopez@cinesync.com.');
+      expect(toasts.calls.mostRecent().args[0]).toBe(
+        'Rol de administrador retirado a maria.lopez@cinesync.com. Su sesión se cerró: tendrá que iniciar sesión de nuevo.',
+      );
       expect(rowButton(1).textContent).toContain('Dar administrador');
     });
 

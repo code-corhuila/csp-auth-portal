@@ -82,7 +82,7 @@ so closing the tab ends the session) by `RefreshTokenStore`, which tolerates an 
 | `restore(): Promise<void>` | The shell calls it after connecting and waits for it before the first navigation. Without a kept token it resolves at once; otherwise it renews with `POST /api/v1/auth/refresh`. It resolves when the attempt finished, whatever the outcome, and never rejects |
 | `refresh(): Promise<void>` | Renews the tokens (the refresh token rotates: the new one is stored). Concurrent callers share one request. Never rejects |
 | automatic renewal | After each `start()` a timer renews the access token 60 s before the `expiresIn` the API returned (at least 5 s from now); `end()` cancels it |
-| `signOut(): Promise<void>` | `POST /api/v1/auth/logout` with the refresh token (the shell's interceptor adds the Bearer), then clears the memory and the storage even if the call fails |
+| `signOut(): Promise<void>` | Sends `POST /api/v1/auth/logout` with the refresh token (`keepalive: true`; the shell's interceptor adds the Bearer when the request is sent) and clears the memory and the storage right after, without waiting for the answer, so leaving the page cannot cancel the clearing; a failed call changes nothing |
 | `end()` | Clears the memory, the timer and the stored refresh token, without calling the API |
 
 When a renewal fails with `401` or `423` the session ends and the stored token is removed; a transient failure (status `0`, `5xx`, timeout) ends only the in-memory session and keeps the stored
@@ -94,8 +94,8 @@ the person to `/auth/login?returnUrl=...`.
 The second entry point, `src/app/auth/admin/admin.routes.ts` (`ADMIN_ROUTES`), is the `/admin/users` screen of `12-ux-ui/wireframes.md` section 6. The shell mounts it
 at `admin/users` (the users page is the empty path) behind `roleGuard`; run alone, `standalone.routes.ts` mounts it at the same address. An administrator searches
 accounts by email prefix (`GET /api/v1/auth/users?email=&page=&limit=`) and grants or revokes `ADMIN` after a confirmation
-(`PATCH /api/v1/auth/users/{userId}/role` with `{ "role": "ADMIN", "enabled": true|false }` and a fresh `Idempotency-Key`). The role is effective on the
-target's next login or token refresh, and the success toast says so. All the text of the screen is Spanish; failures are mapped by status and code to Spanish messages (`admin-error-message.ts`), never the server's text. `Revoke` is disabled for the only administrator when the list is the whole directory;
+(`PATCH /api/v1/auth/users/{userId}/role` with `{ "role": "ADMIN", "enabled": true|false }` and a fresh `Idempotency-Key`). A granted role is effective on the
+target's next login or token refresh; a revoked `ADMIN` ends every session of that user at once (ADR-031, amendment 2026-10-24), so the user signs in again as a normal user. The confirmation dialog and the success toast say which of the two applies. All the text of the screen is Spanish; failures are mapped by status and code to Spanish messages (`admin-error-message.ts`), never the server's text. `Revoke` is disabled for the only administrator when the list is the whole directory;
 otherwise the API decides and a `409 LAST_ADMIN` or `409 USER_WITHOUT_ROLES` is shown as an error toast and the list reloads. Role changes need the `user:role:update` permission, enforced by the API.
 
 The session lives in memory (`AuthSessionService`: the user summary and the access token; the refresh token is not kept). `authGuard` sends anonymous visitors to
