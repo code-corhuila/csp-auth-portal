@@ -200,4 +200,30 @@ describe('AuthApiService', () => {
     http.expectOne('/api/v1/auth/me/email').flush(shellError(409, 'EMAIL_ALREADY_REGISTERED'), { status: 409, statusText: 'Conflict' });
     expect(caught?.code).toBe('EMAIL_ALREADY_REGISTERED');
   });
+
+  it('posts to /forgot-password without an Idempotency-Key, as the contract says', () => {
+    service.requestPasswordReset({ email: 'maria@cinesync.com' }).subscribe();
+    const request = http.expectOne('/api/v1/auth/forgot-password');
+    expect(request.request.headers.has('Idempotency-Key')).toBeFalse();
+    request.flush(null, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('posts the token and the new password to /reset-password without an Idempotency-Key and completes on 204', () => {
+    let completed = false;
+    service.resetPassword({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c', password: 'SecurePass123!' }).subscribe({ complete: () => (completed = true) });
+    const request = http.expectOne('/api/v1/auth/reset-password');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c', password: 'SecurePass123!' });
+    expect(request.request.headers.has('Idempotency-Key')).toBeFalse();
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    expect(completed).toBeTrue();
+  });
+
+  it('hands the 401 of /reset-password to the page unchanged', () => {
+    let caught: ApiError | undefined;
+    service.resetPassword({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c', password: 'SecurePass123!' }).subscribe({ error: e => (caught = e) });
+    http.expectOne('/api/v1/auth/reset-password').flush(shellError(401, 'INVALID_TOKEN'), { status: 401, statusText: 'x' });
+    expect(caught?.status).toBe(401);
+    expect(caught?.code).toBe('INVALID_TOKEN');
+  });
 });

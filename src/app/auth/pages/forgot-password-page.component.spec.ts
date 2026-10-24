@@ -54,7 +54,7 @@ describe('ForgotPasswordPageComponent', () => {
 
   it('shows the failure and lets the person try again when the request is rejected', () => {
     const fixture = create();
-    const rejected: ApiError = { status: 429, code: 'X', message: 'x', details: [], traceId: 't', userMessage: 'Too many requests.' };
+    const rejected: ApiError = { status: 429, code: 'X', message: 'x', details: [], traceId: 't', userMessage: 'shell text' };
     api.requestPasswordReset.and.returnValue(throwError(() => rejected));
     const root: HTMLElement = fixture.nativeElement;
     const input = root.querySelector<HTMLInputElement>('#forgot-email')!;
@@ -62,7 +62,7 @@ describe('ForgotPasswordPageComponent', () => {
     input.dispatchEvent(new Event('input'));
     root.querySelector('form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
-    expect(root.querySelector('[role="alert"]')!.textContent).toContain('Too many requests.');
+    expect(root.querySelector('[role="alert"]')!.textContent).toContain('El servicio está ocupado');
     expect(root.querySelector('[role="status"]')).toBeNull();
     expect(root.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
   });
