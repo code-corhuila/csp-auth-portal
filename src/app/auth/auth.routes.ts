@@ -22,7 +22,7 @@ export const AUTH_ROUTES: Routes = [
   },
   {
     path: 'profile',
-    title: 'Mi perfil · Cambiar correo',
+    title: 'Mi perfil',
     canActivate: [authGuard],
     loadComponent: () => import('./profile/profile-page.component').then(m => m.ProfilePageComponent),
   },

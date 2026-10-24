@@ -15,7 +15,7 @@ describe('AUTH_ROUTES', () => {
   });
 
   it('titles the profile route in UTF-8 Spanish', () => {
-    expect(AUTH_ROUTES.find(route => route.path === 'profile')?.title).toBe('Mi perfil · Cambiar correo');
+    expect(AUTH_ROUTES.find(route => route.path === 'profile')?.title).toBe('Mi perfil');
   });
 
   it('redirects the empty path to login', () => {
