@@ -115,6 +115,7 @@ describe('AuthApiService', () => {
     const request = http.expectOne('/api/v1/auth/logout');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ refreshToken: 'refresh' });
+    expect(request.request.keepalive).toBeTrue();
     request.flush(null, { status: 204, statusText: 'No Content' });
     expect(completed).toBeTrue();
   });
