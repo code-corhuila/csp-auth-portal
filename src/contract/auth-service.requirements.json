@@ -11,6 +11,9 @@
     { "operationId": "requestEmailChange", "method": "PATCH", "path": "/me/email", "requiredHeaders": ["Idempotency-Key"] },
     { "operationId": "verifyEmailChange", "method": "POST", "path": "/me/email/verify", "requiredHeaders": ["Idempotency-Key"] },
     { "operationId": "listUsers", "method": "GET", "path": "/users", "requiredHeaders": [] },
-    { "operationId": "updateUserRole", "method": "PATCH", "path": "/users/{userId}/role", "requiredHeaders": ["Idempotency-Key"] }
+    { "operationId": "updateUserRole", "method": "PATCH", "path": "/users/{userId}/role", "requiredHeaders": ["Idempotency-Key"] },
+    { "operationId": "getMyProfile", "method": "GET", "path": "/me", "requiredHeaders": [] },
+    { "operationId": "updateMyProfile", "method": "PATCH", "path": "/me", "requiredHeaders": [] },
+    { "operationId": "changeMyPassword", "method": "POST", "path": "/me/password", "requiredHeaders": [] }
   ]
 }

@@ -1,4 +1,4 @@
-import { UserSummary } from './user';
+import { Role, UserSummary } from './user';
 
 /** Request and response types of csp-auth-api, mirrored with the exact field names (camelCase). */
 export interface RegisterRequest {
@@ -49,4 +49,26 @@ export interface EmailChangeRequest {
 export interface EmailVerificationRequest {
   /** Exactly six digits, leading zeros included, so it is always a string. */
   verificationCode: string;
+}
+
+/** What `GET /me` returns; phone and address are null for an account created before they existed (ADR-024, ADR-051). */
+export interface ProfileResponse {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  roles: Role[];
+}
+
+/** All fields optional, at least one: only what changed is sent (ADR-051). The email is never edited here. */
+export interface UpdateProfileRequest {
+  name?: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
