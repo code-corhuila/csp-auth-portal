@@ -1,9 +1,9 @@
 import { ApiError } from '../shell-contract';
+import { SAME_PASSWORD_MESSAGE } from './password-rules';
 
 export type PasswordResetStep = 'request' | 'reset';
 
-/** The API tells this 400 apart only by the field and this text (contract auth-service 1.8.0): there is no per-detail code. */
-const SAME_PASSWORD_DETAIL = { field: 'password', message: 'The new password must differ from the current one' };
+const SAME_PASSWORD_DETAIL = { field: 'password', message: SAME_PASSWORD_MESSAGE };
 
 const INVALID_BY_STEP: Record<PasswordResetStep, string> = {
   request: 'Ingresa un correo electrónico válido.',
