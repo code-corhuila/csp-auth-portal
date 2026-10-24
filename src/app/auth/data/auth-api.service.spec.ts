@@ -25,8 +25,8 @@ const registration: RegisterRequest = {
 const shellLikeInterceptor: HttpInterceptorFn = (req, next) =>
   next(req).pipe(catchError((err: HttpErrorResponse) => throwError(() => err.error)));
 
-function shellError(status: number, code: string, message = 'server message'): ApiError {
-  return { status, code, message, details: [], traceId: 't', userMessage: 'shell message' };
+function shellError(status: number, code: string, message = 'server message', retryAfterSeconds?: number): ApiError {
+  return { status, code, message, details: [], traceId: 't', userMessage: 'shell message', ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }) };
 }
 
 describe('AuthApiService', () => {
@@ -66,10 +66,36 @@ describe('AuthApiService', () => {
     expect(caught?.userMessage).toContain('bloqueada');
   });
 
+  for (const code of ['RATE_LIMITED', 'TOO_MANY_REQUESTS']) {
+    it(`explains the failed-attempts limit on a 429 ${code} of /login`, () => {
+      let caught: ApiError | undefined;
+      service.login({ email: 'x@cinesync.com', password: 'p' }).subscribe({ error: e => (caught = e) });
+      http.expectOne('/api/v1/auth/login').flush(shellError(429, code), { status: 429, statusText: 'x' });
+      expect(caught?.status).toBe(429);
+      expect(caught?.userMessage).toBe('Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos.');
+    });
+  }
+
+  const waits: [number, string][] = [
+    [1, '1 minuto'],
+    [59, '1 minuto'],
+    [60, '1 minuto'],
+    [61, '2 minutos'],
+    [300, '5 minutos'],
+  ];
+  for (const [seconds, wait] of waits) {
+    it(`tells to wait ${wait} when a 429 of /login says ${seconds} seconds`, () => {
+      let caught: ApiError | undefined;
+      service.login({ email: 'x@cinesync.com', password: 'p' }).subscribe({ error: e => (caught = e) });
+      http.expectOne('/api/v1/auth/login').flush(shellError(429, 'RATE_LIMITED', 'server message', seconds), { status: 429, statusText: 'x' });
+      expect(caught?.userMessage).toBe(`Demasiados intentos fallidos. Inténtalo de nuevo en ${wait}.`);
+    });
+  }
+
   it('keeps the message of the shell for any other login failure', () => {
     let caught: ApiError | undefined;
     service.login({ email: 'x@cinesync.com', password: 'p' }).subscribe({ error: e => (caught = e) });
-    http.expectOne('/api/v1/auth/login').flush(shellError(429, 'TOO_MANY_REQUESTS'), { status: 429, statusText: 'x' });
+    http.expectOne('/api/v1/auth/login').flush(shellError(500, 'INTERNAL_ERROR'), { status: 500, statusText: 'x' });
     expect(caught?.userMessage).toBe('shell message');
   });
 

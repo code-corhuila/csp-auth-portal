@@ -10,6 +10,7 @@ and is tagged `v<version>` once it is merged.
 
 ### Added
 
+- The login says how long to wait after the failed-attempts limit (HU-AUTH-005, [csp-auth-portal#71](https://github.com/code-corhuila/csp-auth-portal/issues/71)): a `429` that carries `retryAfterSeconds` (the `Retry-After` of the auth API, read by the shell) shows "Demasiados intentos fallidos. Inténtalo de nuevo en N minutos.", with the seconds rounded up to whole minutes and "1 minuto" in the singular. Without the value the text keeps saying "en unos minutos". `shell-contract.ts` declares the optional `retryAfterSeconds` of `ApiError`.
 - `/auth/profile` page (any signed-in role, behind `authGuard`): shows the current email and changes it in two steps, a form that requests the change (`PATCH /api/v1/auth/me/email`, `202`) and a
   6-digit code form that confirms it (`POST /api/v1/auth/me/email/verify`, `204`). The code is a string (leading zeros kept), is never logged or stored, and takes the focus after the request.
   Every cause of an invalid code shows one generic Spanish message with an option to request a new code; `409` (address in use, also at the confirmation), `429`, `401` and network failures are
@@ -31,6 +32,7 @@ and is tagged `v<version>` once it is merged.
 
 - A contract check keeps the requests of the portal equal to what `auth-service.yaml` requires: `src/contract/auth-service.requirements.json` lists the operations the portal calls and their required headers, `scripts/check-contract.mjs` (`npm run test:contract`, with `AUTH_CONTRACT_FILE`) compares that table with the contract in CI, and `auth-api.contract.spec.ts` makes every call and checks the headers, which would have caught the missing `Idempotency-Key` of the email change (HU-AUTH-004, [#68](https://github.com/code-corhuila/csp-auth-portal/issues/68)).
 - The email change sends the `Idempotency-Key` header that the contract requires on `PATCH /api/v1/auth/me/email` and `POST /api/v1/auth/me/email/verify`: the API answers `400` without it, so the profile page could not change an email (HU-AUTH-004, [#65](https://github.com/code-corhuila/csp-auth-portal/issues/65)).
+- Login shows a Spanish message when the API limits failed attempts (`429`, `RATE_LIMITED` or the gateway's `TOO_MANY_REQUESTS`): "Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos." The shell's `ApiError` does not expose `Retry-After`, so the message carries no time (HU-AUTH-005, [#63](https://github.com/code-corhuila/csp-auth-portal/issues/63)).
 
 ### Changed
 

@@ -74,7 +74,18 @@ function loginMessage(error: ApiError): string | undefined {
   if (error.status === 401) {
     return 'Correo o contraseña incorrectos.';
   }
-  return error.status === 423 ? 'Tu cuenta está bloqueada temporalmente. Inténtalo más tarde.' : undefined;
+  if (error.status === 423) {
+    return 'Tu cuenta está bloqueada temporalmente. Inténtalo más tarde.';
+  }
+  return error.status === 429 ? rateLimitedMessage(error.retryAfterSeconds) : undefined;
+}
+
+function rateLimitedMessage(retryAfterSeconds: number | undefined): string {
+  if (retryAfterSeconds === undefined) {
+    return 'Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos.';
+  }
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return `Demasiados intentos fallidos. Inténtalo de nuevo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`;
 }
 
 function registerMessage(error: ApiError): string | undefined {
