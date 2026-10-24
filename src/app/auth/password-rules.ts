@@ -12,3 +12,8 @@ export function meetsPasswordRules(password: string): boolean {
 export function passwordRules(control: AbstractControl<string>): ValidationErrors | null {
   return meetsPasswordRules(control.value) ? null : { passwordRules: true };
 }
+
+export const PASSWORD_RULES_HINT = 'De 8 a 72 caracteres, una mayúscula y un número.';
+
+/** The API tells this 400 apart only by the field and this text (contract auth-service 1.8.0 and 1.9.0): there is no per-detail code. */
+export const SAME_PASSWORD_MESSAGE = 'The new password must differ from the current one';

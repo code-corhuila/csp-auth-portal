@@ -2,12 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { ApiError, asApiError } from '../../shell-contract';
-import { AuthResponse, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest, ResetPasswordRequest } from '../model/auth';
+import { AuthResponse, ChangePasswordRequest, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, ProfileResponse, RefreshRequest, RegisterRequest, ResetPasswordRequest, UpdateProfileRequest } from '../model/auth';
 
 const BASE = '/api/v1/auth';
 
 /**
- * Typed calls to csp-auth-api (auth-service 1.7.0). The injected HttpClient is the SHELL's:
+ * Typed calls to csp-auth-api (auth-service 1.9.0). The injected HttpClient is the SHELL's:
  * its interceptor completes the '/api/v1/...' path, attaches the correlation id and
  * normalises every error. The portal never compares or keeps a password.
  */
@@ -70,6 +70,24 @@ export class AuthApiService {
     return this.http.post<void>(`${BASE}/me/email/verify`, request, {
       headers: { 'Idempotency-Key': crypto.randomUUID() },
     });
+  }
+
+  /** Needs the Bearer token. Read from the database, so it carries the phone and address that no token does (ADR-051). */
+  getMyProfile(): Observable<ProfileResponse> {
+    return this.http.get<ProfileResponse>(`${BASE}/me`);
+  }
+
+  /** Needs the Bearer token; the body holds only the fields that changed. No Idempotency-Key: the contract takes none (ADR-051). */
+  updateMyProfile(request: UpdateProfileRequest): Observable<ProfileResponse> {
+    return this.http.patch<ProfileResponse>(`${BASE}/me`, request);
+  }
+
+  /**
+   * Needs the Bearer token. 200 is a fresh session for this device (every other device loses its refresh token), so the caller
+   * must start it. A wrong current password is a 400 on `currentPassword`, never a 401 (ADR-051). No Idempotency-Key.
+   */
+  changeMyPassword(request: ChangePasswordRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${BASE}/me/password`, request);
   }
 }
 

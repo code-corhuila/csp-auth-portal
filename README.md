@@ -61,7 +61,7 @@ that it answers the allowed origin, stays silent for any other, and does not sta
 
 ## Authentication against csp-auth-api (HU-AUTH-003)
 
-The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.7.0). `AuthApiService` is the only class that talks to it;
+The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.9.0). `AuthApiService` is the only class that talks to it;
 the portal never compares or stores a password. Sign in and registration need the API, the gateway and the shell running.
 
 | Route (under `/auth`) | Behaviour |
@@ -69,7 +69,7 @@ the portal never compares or stores a password. Sign in and registration need th
 | `login` | Modal. `POST /api/v1/auth/login`; starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
 | `register` | Modal. `POST /api/v1/auth/register` with an `Idempotency-Key`; creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
 | `forgot-password` | Modal. `POST /api/v1/auth/forgot-password`; always confirms neutrally (202), whether or not the account exists. Sends no `Idempotency-Key`; `404` (no SMTP relay) and `429` (concurrency limit) show a generic Spanish message |
-| `reset-password` | Modal opened from the email link `/auth/reset-password#token=<uuid>` (HU-AUTH-006, ADR-050). The token is read from the URL fragment only (never the query string), kept in memory, never logged, and the address is replaced right away so the address bar and the history do not keep it. New password and confirmation follow the registration rules (8 to 72 bytes, one uppercase letter, one digit); `POST /api/v1/auth/reset-password` with no `Idempotency-Key`. `204` shows a confirmation with a link to login; `401 INVALID_TOKEN` (unknown, expired, used or superseded) offers a link to request a new one; `400`, `404`, `429` and `5xx` show a generic Spanish message. A missing or malformed token shows the same "request a new link" option without calling the API |
+| `reset-password` | Modal opened from the email link `/auth/reset-password#token=<uuid>` (HU-AUTH-006, ADR-050). The token is read from the URL fragment only (never the query string), kept in memory, never logged, and the address is replaced right away so the address bar and the history do not keep it. New password and confirmation follow the registration rules (8 to 72 bytes, one uppercase letter, one digit); `POST /api/v1/auth/reset-password` with no `Idempotency-Key`. `204` shows a confirmation with a link to login; `401 INVALID_TOKEN` (unknown, expired, used or superseded) offers a link to request a new one; `400` with the detail `password` / "The new password must differ from the current one" (contract 1.8.0, the token is not consumed) shows "La nueva contraseña debe ser distinta de la actual." and keeps the form and the token so another password can be typed; any other `400`, `404`, `429` and `5xx` show a generic Spanish message. A missing or malformed token shows the same "request a new link" option without calling the API |
 | `profile` | Page for any signed-in role (`authGuard`). Shows the current email; `PATCH /api/v1/auth/me/email` requests a change and `POST /api/v1/auth/me/email/verify` confirms it with the 6-digit code (HU-AUTH-004, ADR-034) |
 
 ### Session (restore and renewal)
