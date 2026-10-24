@@ -17,6 +17,10 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () => import('./pages/forgot-password-page.component').then(m => m.ForgotPasswordPageComponent),
   },
   {
+    path: 'reset-password',
+    loadComponent: () => import('./pages/reset-password-page.component').then(m => m.ResetPasswordPageComponent),
+  },
+  {
     path: 'profile',
     title: 'Mi perfil · Cambiar correo',
     canActivate: [authGuard],

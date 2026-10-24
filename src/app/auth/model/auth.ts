@@ -28,6 +28,12 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface ResetPasswordRequest {
+  /** The UUID of the link sent by email; read from the URL fragment, never logged. */
+  token: string;
+  password: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
