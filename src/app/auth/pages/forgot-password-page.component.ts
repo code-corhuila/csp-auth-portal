@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
 import { LOGIN_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
+import { passwordResetErrorMessage } from '../password-reset-error-message';
 import { AuthModalComponent } from '../ui/auth-modal.component';
 
 @Component({
@@ -68,7 +69,7 @@ export class ForgotPasswordPageComponent {
         this.pending.set(false);
       },
       error: err => {
-        this.failure.set(asApiError(err).userMessage);
+        this.failure.set(passwordResetErrorMessage(asApiError(err), 'request'));
         this.pending.set(false);
       },
     });
