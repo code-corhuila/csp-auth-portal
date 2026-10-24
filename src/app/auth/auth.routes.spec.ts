@@ -10,8 +10,8 @@ import { Role } from './model/user';
 describe('AUTH_ROUTES', () => {
   const paths = AUTH_ROUTES.map(route => route.path);
 
-  it('exposes login, register, forgot-password and profile', () => {
-    expect(paths).toEqual(jasmine.arrayContaining(['login', 'register', 'forgot-password', 'profile']));
+  it('exposes login, register, forgot-password, reset-password and profile', () => {
+    expect(paths).toEqual(jasmine.arrayContaining(['login', 'register', 'forgot-password', 'reset-password', 'profile']));
   });
 
   it('titles the profile route in UTF-8 Spanish', () => {
@@ -28,7 +28,7 @@ describe('AUTH_ROUTES', () => {
     const loaded = await Promise.all(
       AUTH_ROUTES.filter(route => route.loadComponent).map(route => route.loadComponent!()),
     );
-    expect(loaded.length).toBe(4);
+    expect(loaded.length).toBe(5);
     loaded.forEach(component => expect(component).toBeDefined());
   });
 });
