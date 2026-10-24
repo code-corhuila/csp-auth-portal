@@ -4,17 +4,18 @@ import { asApiError } from '../../shell-contract';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { ToastService } from '../ui/toast.service';
+import { PasswordSectionComponent } from './password-section.component';
 import { ProfileDataSectionComponent } from './profile-data-section.component';
 import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
 
 /**
- * Mi perfil (HU-AUTH-007, ADR-051) in titled sections: personal data and email. The email section is the wireframes'
+ * Mi perfil (HU-AUTH-007, ADR-051) in three sections: personal data, email and password. The email section is the wireframes'
  * /profile in its two steps (ADR-034): ask for a new email, then confirm it with the 6-digit code.
  */
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [ReactiveFormsModule, ProfileDataSectionComponent],
+  imports: [ReactiveFormsModule, ProfileDataSectionComponent, PasswordSectionComponent],
   styleUrl: '../pages/auth-form.css',
   styles: `
     .profile { max-width: 460px; margin: 32px auto; padding: 0 16px; }
@@ -61,6 +62,7 @@ import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
         <p id="profile-failure" class="form-error" role="alert">{{ message }}</p>
       }
       </section>
+      <app-password-section />
     </section>
   `,
 })

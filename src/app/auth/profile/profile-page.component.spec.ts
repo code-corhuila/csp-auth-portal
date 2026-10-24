@@ -14,6 +14,7 @@ describe('ProfilePageComponent', () => {
     requestEmailChange: jasmine.createSpy('requestEmailChange'),
     verifyEmailChange: jasmine.createSpy('verifyEmailChange'),
     getMyProfile: jasmine.createSpy('getMyProfile'),
+    changeMyPassword: jasmine.createSpy('changeMyPassword'),
   };
   let toasts: jasmine.Spy;
   let session: AuthSessionService;
@@ -52,11 +53,11 @@ describe('ProfilePageComponent', () => {
     return { fixture, root, type, submit, requestCode };
   }
 
-  it('has titled sections in order: personal data and email', () => {
+  it('has three titled sections in order: personal data, email and password', () => {
     const { root } = create();
     const headings = Array.from(root.querySelectorAll('h2')).map(h => h.textContent!.trim());
-    expect(headings).toEqual(['Datos personales', 'Correo electrónico']);
-    expect(root.querySelectorAll('section[aria-labelledby]').length).toBe(2);
+    expect(headings).toEqual(['Datos personales', 'Correo electrónico', 'Contraseña']);
+    expect(root.querySelectorAll('section[aria-labelledby]').length).toBe(3);
   });
 
   it('shows the current email and a labelled field for the new one', () => {
