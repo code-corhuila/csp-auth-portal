@@ -11,6 +11,20 @@ describe('passwordResetErrorMessage', () => {
     expect(passwordResetErrorMessage(error(400), 'reset')).toContain('8 a 72 caracteres');
   });
 
+  it('tells a password equal to the current one apart from a weak one', () => {
+    const same = { ...error(400, 'VALIDATION_ERROR'), details: [{ field: 'password', message: 'The new password must differ from the current one' }] };
+    const weak = { ...error(400, 'VALIDATION_ERROR'), details: [{ field: 'password', message: 'Password must be at least 8 characters, with one uppercase letter and one number' }] };
+    expect(passwordResetErrorMessage(same, 'reset')).toBe('La nueva contraseña debe ser distinta de la actual.');
+    expect(passwordResetErrorMessage(weak, 'reset')).toContain('8 a 72 caracteres');
+  });
+
+  it('keeps the generic 400 message when the detail is on another field or the step is not the reset', () => {
+    const otherField = { ...error(400), details: [{ field: 'token', message: 'The new password must differ from the current one' }] };
+    const same = { ...error(400), details: [{ field: 'password', message: 'The new password must differ from the current one' }] };
+    expect(passwordResetErrorMessage(otherField, 'reset')).toContain('8 a 72 caracteres');
+    expect(passwordResetErrorMessage(same, 'request')).toContain('correo');
+  });
+
   it('says the recovery is unavailable on 404', () => {
     expect(passwordResetErrorMessage(error(404), 'reset')).toContain('no está disponible');
   });

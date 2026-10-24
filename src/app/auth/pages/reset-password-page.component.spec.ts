@@ -114,6 +114,25 @@ describe('ResetPasswordPageComponent', () => {
     expect(root.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
   });
 
+  it('keeps the form editable and resends the same token when the new password equals the current one', () => {
+    const fixture = create();
+    const same: ApiError = { ...apiError(400, 'VALIDATION_ERROR'), details: [{ field: 'password', message: 'The new password must differ from the current one' }] };
+    api.resetPassword.and.returnValue(throwError(() => same));
+    fill(fixture.nativeElement, STRONG, STRONG);
+    submit(fixture);
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[role="alert"]')!.textContent).toContain('debe ser distinta de la actual');
+    expect(root.querySelector('form')).not.toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
+
+    api.resetPassword.and.returnValue(of(undefined));
+    fill(root, 'Cinesync2027', 'Cinesync2027');
+    submit(fixture);
+    expect(api.resetPassword.calls.count()).toBe(2);
+    expect(api.resetPassword.calls.mostRecent().args[0]).toEqual({ token: TOKEN, password: 'Cinesync2027' });
+    expect(root.querySelector('form')).toBeNull();
+  });
+
   for (const status of [400, 404, 500]) {
     it(`shows a Spanish message on ${status} and never the server text`, () => {
       const fixture = create();
