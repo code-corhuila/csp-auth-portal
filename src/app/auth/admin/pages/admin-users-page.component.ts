@@ -11,7 +11,10 @@ import { UserPage } from '../model/user-page';
 
 const PAGE_SIZE = 10;
 const LAST_ADMIN_MESSAGE = 'Debe quedar al menos un administrador.';
-const FRESHNESS = 'El cambio se aplica la próxima vez que el usuario inicie sesión o se renueve su token.';
+const GRANT_NOTICE = 'Esta cuenta podrá administrar Cinesync. El cambio se aplica la próxima vez que el usuario inicie sesión o se renueve su token.';
+const REVOKE_NOTICE = 'Esta cuenta perderá su acceso de administración y su sesión se cerrará: tendrá que iniciar sesión de nuevo.';
+const REVOKE_RESULT = 'Su sesión se cerró: tendrá que iniciar sesión de nuevo.';
+const GRANT_RESULT = 'El cambio se aplica la próxima vez que el usuario inicie sesión o se renueve su token.';
 const ROLE_LABELS: Record<Role, string> = { ADMIN: 'Administrador', CLIENT: 'Cliente' };
 
 interface RoleChange {
@@ -112,7 +115,7 @@ const isAdmin = (user: UserSummary): boolean => user.roles.includes('ADMIN');
 
     @if (pending(); as change) {
       <app-auth-modal [title]="dialogTitle(change)" titleId="role-change-title" closeLabel="Cerrar" [maxWidth]="480" (closed)="cancel()">
-        <p class="dialog-text">{{ change.grant ? 'Esta cuenta podrá administrar Cinesync.' : 'Esta cuenta perderá su acceso de administración.' }} {{ freshness }}</p>
+        <p class="dialog-text">{{ change.grant ? grantNotice : revokeNotice }}</p>
         <div class="dialog-actions">
           <button class="btn btn-ghost" type="button" data-initial-focus (click)="cancel()">Cancelar</button>
           <button class="btn" type="button" [class.btn-danger]="!change.grant" [class.btn-primary]="change.grant"
@@ -138,7 +141,8 @@ export class AdminUsersPageComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
   protected readonly lastAdminMessage = LAST_ADMIN_MESSAGE;
-  protected readonly freshness = FRESHNESS;
+  protected readonly grantNotice = GRANT_NOTICE;
+  protected readonly revokeNotice = REVOKE_NOTICE;
   protected readonly isAdmin = isAdmin;
   protected readonly roleLabel = (role: Role): string => ROLE_LABELS[role];
 
@@ -228,7 +232,7 @@ export class AdminUsersPageComponent implements OnInit {
     this.api.setAdmin(change.user.id, change.grant).subscribe({
       next: updated => {
         this.result.update(page => page && { ...page, data: page.data.map(u => (u.id === updated.id ? updated : u)) });
-        this.toasts.show(`Rol de administrador ${change.grant ? 'otorgado a' : 'retirado a'} ${change.user.email}. ${FRESHNESS}`, 'success');
+        this.toasts.show(`Rol de administrador ${change.grant ? 'otorgado a' : 'retirado a'} ${change.user.email}. ${change.grant ? GRANT_RESULT : REVOKE_RESULT}`, 'success');
         this.finish();
       },
       error: err => {
