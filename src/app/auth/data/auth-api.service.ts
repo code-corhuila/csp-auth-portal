@@ -26,9 +26,12 @@ export class AuthApiService {
     return this.http.post<AuthResponse>(`${BASE}/refresh`, request);
   }
 
-  /** Needs the Bearer token, which the shell's interceptor adds; revokes the refresh token sent. */
+  /**
+   * Needs the Bearer token, which the shell's interceptor adds; revokes the refresh token sent.
+   * `keepalive` lets the browser finish it when the page is left right after (it takes effect with the fetch backend).
+   */
   logout(request: LogoutRequest): Observable<void> {
-    return this.http.post<void>(`${BASE}/logout`, request);
+    return this.http.post<void>(`${BASE}/logout`, request, { keepalive: true });
   }
 
   register(request: RegisterRequest): Observable<AuthResponse> {
