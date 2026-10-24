@@ -2,12 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { ApiError, asApiError } from '../../shell-contract';
-import { AuthResponse, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest } from '../model/auth';
+import { AuthResponse, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, RefreshRequest, RegisterRequest, ResetPasswordRequest } from '../model/auth';
 
 const BASE = '/api/v1/auth';
 
 /**
- * Typed calls to csp-auth-api (auth-service 1.6.0). The injected HttpClient is the SHELL's:
+ * Typed calls to csp-auth-api (auth-service 1.7.0). The injected HttpClient is the SHELL's:
  * its interceptor completes the '/api/v1/...' path, attaches the correlation id and
  * normalises every error. The portal never compares or keeps a password.
  */
@@ -39,9 +39,17 @@ export class AuthApiService {
     );
   }
 
-  /** The contract answers 202 whether or not the account exists. */
+  /** The contract answers 202 whether or not the account exists; the operation takes no Idempotency-Key (ADR-050). */
   requestPasswordReset(request: ForgotPasswordRequest): Observable<void> {
     return this.http.post<void>(`${BASE}/forgot-password`, request);
+  }
+
+  /**
+   * 204 when the token sets the new password; 401 INVALID_TOKEN has one body for an unknown, expired, used or superseded token.
+   * No Idempotency-Key: the token is single use (ADR-050). The token is never logged.
+   */
+  resetPassword(request: ResetPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${BASE}/reset-password`, request);
   }
 
   /**
