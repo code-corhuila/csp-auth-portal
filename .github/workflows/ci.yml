@@ -13,6 +13,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: code-corhuila/csp-docs
+          ref: main
+          path: csp-docs
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -22,6 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Check the requests table against the auth contract
+        run: AUTH_CONTRACT_FILE="$PWD/csp-docs/07-api/contracts/openapi/auth-service.yaml" npm run test:contract
 
       - name: Build
         run: npm run build
@@ -38,8 +46,11 @@ jobs:
       - name: Check the CORS rule of the image
         run: |
           # The shell loads this portal from another origin (ADR-026): the image must answer
-          # the allowed origin, stay silent for any other, and refuse to start without the rule.
+          # the allowed origin, stay silent for any other, and refuse to start without the rule or with an unanchored one.
           ! docker run --rm csp-auth-portal:ci
+          ! docker run --rm -e 'CORS_ALLOWED_ORIGIN_REGEX=' csp-auth-portal:ci
+          ! docker run --rm -e 'CORS_ALLOWED_ORIGIN_REGEX=http://localhost:4200' csp-auth-portal:ci
+          ! docker run --rm -e 'CORS_ALLOWED_ORIGIN_REGEX=^http://localhost:4200' csp-auth-portal:ci
           docker run -d --name portal -p 8080:80 -e 'CORS_ALLOWED_ORIGIN_REGEX=^http://localhost:420[0-5]$' csp-auth-portal:ci
           for i in $(seq 1 20); do curl -fs http://localhost:8080/health >/dev/null && break; sleep 1; done
           module=$(docker exec portal sh -c 'cd /usr/share/nginx/html && ls *.js | head -1')

@@ -15,6 +15,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RefreshRequest {
+  refreshToken: string;
+}
+
+export interface LogoutRequest {
+  /** Revokes this refresh token. */
+  refreshToken: string;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -25,4 +34,13 @@ export interface AuthResponse {
   /** Seconds until the access token expires. */
   expiresIn: number;
   user: UserSummary;
+}
+
+export interface EmailChangeRequest {
+  email: string;
+}
+
+export interface EmailVerificationRequest {
+  /** Exactly six digits, leading zeros included, so it is always a string. */
+  verificationCode: string;
 }
