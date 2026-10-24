@@ -10,6 +10,11 @@ and is tagged `v<version>` once it is merged.
 
 ## [3.0.0] - 2026-10-15
 
+### Fixed
+
+- The confirmation dialog and the success toast of "Quitar administrador" no longer say the change applies on the next login: removing `ADMIN` ends the sessions of that user at once (HU-AUTH-003 Scenario 4, ADR-031 amendment 2026-10-24), so they say the session closes and the user must sign in again. The text for granting `ADMIN` is unchanged ([#85](https://github.com/code-corhuila/csp-auth-portal/issues/85)).
+- `AuthSessionService.signOut()` forgets the session and the stored refresh token right after sending `POST /api/v1/auth/logout`, without waiting for the answer, and the request is sent with `keepalive: true`; before, a page left at once cancelled the request and the kept refresh token restored the session on the next load (code-corhuila/csp-auth-api#168).
+
 ### Added
 
 - "Mi perfil" in three sections (HU-AUTH-007, ADR-051, `auth-service` 1.9.0): **Datos personales** loads the profile with `GET /api/v1/auth/me` (`AuthApiService.getMyProfile()`) and edits name, phone and address with `PATCH /api/v1/auth/me` (`updateMyProfile()`), sending only what changed, with the registration rules and the fields named by a `400` marked; **Correo electrónico** keeps the verified change of HU-AUTH-004 untouched; **Contraseña** changes it with `POST /api/v1/auth/me/password` (`changeMyPassword()`, no `Idempotency-Key`), and the `200` fresh session is started like a login so this device stays signed in while the API revokes the others. A wrong current password is a field error (`400` on `currentPassword`, never read as an expired session), "must differ" and the password rules are told apart, and a `429` shows the `Retry-After` wait (`profile-error-message.ts`: `passwordChangeFailure()`, `profileDataFailure()`). The route title is now "Mi perfil".

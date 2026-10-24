@@ -34,11 +34,17 @@ describe('AuthSessionService', () => {
   let session: AuthSessionService;
   let http: HttpTestingController;
   let toasts: jasmine.Spy;
+  let bearerAtSend: Array<string | null>;
 
   beforeEach(() => {
     jasmine.clock().install();
     sessionStorage.removeItem(KEY);
-    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([shellLikeInterceptor])), provideHttpClientTesting()] });
+    bearerAtSend = [];
+    const bearerRecorder: HttpInterceptorFn = (req, next) => {
+      bearerAtSend.push(TestBed.inject(AuthSessionService).accessToken());
+      return next(req);
+    };
+    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([bearerRecorder, shellLikeInterceptor])), provideHttpClientTesting()] });
     session = TestBed.inject(AuthSessionService);
     http = TestBed.inject(HttpTestingController);
     toasts = spyOn(TestBed.inject(ToastService), 'show');
@@ -280,6 +286,26 @@ describe('AuthSessionService', () => {
       await done;
       expect(session.accessToken()).toBeNull();
       expect(sessionStorage.getItem(KEY)).toBeNull();
+    });
+
+    it('forgets the session before the revocation answers, so leaving the page cannot restore it', async () => {
+      session.start(response);
+      const done = session.signOut();
+      expect(session.isAuthenticated()).toBeFalse();
+      expect(session.accessToken()).toBeNull();
+      expect(sessionStorage.getItem(KEY)).toBeNull();
+      http.expectOne('/api/v1/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await done;
+    });
+
+    it('sends the revocation with the access token that was current and asks the browser to keep it alive across navigation', async () => {
+      session.start(response);
+      const done = session.signOut();
+      expect(bearerAtSend).toEqual(['token']);
+      const request = http.expectOne('/api/v1/auth/logout');
+      expect(request.request.keepalive).toBeTrue();
+      request.flush(null, { status: 204, statusText: 'No Content' });
+      await done;
     });
 
     it('makes no request without a kept token', async () => {
