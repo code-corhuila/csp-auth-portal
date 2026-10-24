@@ -226,4 +226,44 @@ describe('AuthApiService', () => {
     expect(caught?.status).toBe(401);
     expect(caught?.code).toBe('INVALID_TOKEN');
   });
+
+  it('gets the own profile from /me', () => {
+    const profile = { id: '1', email: 'maria@cinesync.com', name: 'Maria', phone: null, address: null, roles: ['CLIENT'] };
+    let received: unknown;
+    service.getMyProfile().subscribe(p => (received = p));
+    const request = http.expectOne('/api/v1/auth/me');
+    expect(request.request.method).toBe('GET');
+    request.flush(profile);
+    expect(received).toEqual(profile);
+  });
+
+  it('patches only the given fields to /me without an Idempotency-Key', () => {
+    service.updateMyProfile({ phone: '+573001234567' }).subscribe();
+    const request = http.expectOne('/api/v1/auth/me');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ phone: '+573001234567' });
+    expect(request.request.headers.has('Idempotency-Key')).toBeFalse();
+    request.flush({ id: '1', email: 'maria@cinesync.com', name: 'Maria', phone: '+573001234567', address: null, roles: ['CLIENT'] });
+  });
+
+  it('posts both passwords to /me/password without an Idempotency-Key and returns the fresh session', () => {
+    let received: AuthResponse | undefined;
+    service.changeMyPassword({ currentPassword: 'OldPass123', newPassword: 'NewPass456' }).subscribe(r => (received = r));
+    const request = http.expectOne('/api/v1/auth/me/password');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ currentPassword: 'OldPass123', newPassword: 'NewPass456' });
+    expect(request.request.headers.has('Idempotency-Key')).toBeFalse();
+    request.flush(response);
+    expect(received).toEqual(response);
+  });
+
+  it('passes the shell error of a wrong current password through untouched', () => {
+    let caught: ApiError | undefined;
+    service.changeMyPassword({ currentPassword: 'x', newPassword: 'NewPass456' }).subscribe({ error: e => (caught = e) });
+    http.expectOne('/api/v1/auth/me/password').flush(
+      { ...shellError(400, 'VALIDATION_ERROR'), details: [{ field: 'currentPassword', message: 'The current password is incorrect' }] },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    expect(caught?.details).toEqual([{ field: 'currentPassword', message: 'The current password is incorrect' }]);
+  });
 });
