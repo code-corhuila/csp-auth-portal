@@ -2,6 +2,9 @@ import { ApiError } from '../shell-contract';
 
 export type PasswordResetStep = 'request' | 'reset';
 
+/** The API tells this 400 apart only by the field and this text (contract auth-service 1.8.0): there is no per-detail code. */
+const SAME_PASSWORD_DETAIL = { field: 'password', message: 'The new password must differ from the current one' };
+
 const INVALID_BY_STEP: Record<PasswordResetStep, string> = {
   request: 'Ingresa un correo electrónico válido.',
   reset: 'La contraseña no cumple las reglas: de 8 a 72 caracteres, una mayúscula y un número.',
@@ -15,6 +18,9 @@ export function passwordResetErrorMessage(error: ApiError, step: PasswordResetSt
       : 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
   }
   if (error.status === 400) {
+    if (step === 'reset' && error.details.some(detail => detail.field === SAME_PASSWORD_DETAIL.field && detail.message === SAME_PASSWORD_DETAIL.message)) {
+      return 'La nueva contraseña debe ser distinta de la actual.';
+    }
     return INVALID_BY_STEP[step];
   }
   if (error.status === 404) {

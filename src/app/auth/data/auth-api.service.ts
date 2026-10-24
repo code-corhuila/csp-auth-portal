@@ -7,7 +7,7 @@ import { AuthResponse, EmailChangeRequest, EmailVerificationRequest, ForgotPassw
 const BASE = '/api/v1/auth';
 
 /**
- * Typed calls to csp-auth-api (auth-service 1.7.0). The injected HttpClient is the SHELL's:
+ * Typed calls to csp-auth-api (auth-service 1.8.0). The injected HttpClient is the SHELL's:
  * its interceptor completes the '/api/v1/...' path, attaches the correlation id and
  * normalises every error. The portal never compares or keeps a password.
  */
