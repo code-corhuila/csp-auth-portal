@@ -4,21 +4,30 @@ import { asApiError } from '../../shell-contract';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { ToastService } from '../ui/toast.service';
+import { PasswordSectionComponent } from './password-section.component';
+import { ProfileDataSectionComponent } from './profile-data-section.component';
 import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
 
-/** The wireframes' /profile in its two steps (ADR-034): ask for a new email, then confirm it with the 6-digit code. */
+/**
+ * Mi perfil (HU-AUTH-007, ADR-051) in three sections: personal data, email and password. The email section is the wireframes'
+ * /profile in its two steps (ADR-034): ask for a new email, then confirm it with the 6-digit code.
+ */
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, ProfileDataSectionComponent, PasswordSectionComponent],
   styleUrl: '../pages/auth-form.css',
   styles: `
     .profile { max-width: 460px; margin: 32px auto; padding: 0 16px; }
+    .email-section { margin-top: 28px; }
     .auth-switch button { background: none; border: none; padding: 0; color: var(--color-brand-secondary); font: inherit; font-weight: 700; cursor: pointer; }
   `,
   template: `
     <section class="profile">
       <h1 #heading tabindex="-1">Mi perfil</h1>
+      <app-profile-data-section />
+      <section class="email-section" aria-labelledby="profile-email-title">
+      <h2 id="profile-email-title">Correo electrónico</h2>
       <p>Correo actual: <strong>{{ session.user()?.email }}</strong></p>
 
       @if (step() === 'request') {
@@ -52,6 +61,8 @@ import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
       @if (failure(); as message) {
         <p id="profile-failure" class="form-error" role="alert">{{ message }}</p>
       }
+      </section>
+      <app-password-section />
     </section>
   `,
 })

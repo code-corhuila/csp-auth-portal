@@ -10,7 +10,12 @@ const failure = (status: number, code = 'X'): ApiError =>
   ({ status, code, message: 'English', details: [], traceId: 't', userMessage: 'English' });
 
 describe('ProfilePageComponent', () => {
-  const api = { requestEmailChange: jasmine.createSpy('requestEmailChange'), verifyEmailChange: jasmine.createSpy('verifyEmailChange') };
+  const api = {
+    requestEmailChange: jasmine.createSpy('requestEmailChange'),
+    verifyEmailChange: jasmine.createSpy('verifyEmailChange'),
+    getMyProfile: jasmine.createSpy('getMyProfile'),
+    changeMyPassword: jasmine.createSpy('changeMyPassword'),
+  };
   let toasts: jasmine.Spy;
   let session: AuthSessionService;
 
@@ -19,6 +24,7 @@ describe('ProfilePageComponent', () => {
     api.verifyEmailChange.calls.reset();
     api.requestEmailChange.and.returnValue(of(undefined));
     api.verifyEmailChange.and.returnValue(of(undefined));
+    api.getMyProfile.and.returnValue(new Observable());
     TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }] });
     toasts = spyOn(TestBed.inject(ToastService), 'show');
     session = TestBed.inject(AuthSessionService);
@@ -37,7 +43,7 @@ describe('ProfilePageComponent', () => {
       input.dispatchEvent(new Event('input'));
     };
     const submit = () => {
-      root.querySelector('form')!.dispatchEvent(new Event('submit'));
+      root.querySelector('.email-section form')!.dispatchEvent(new Event('submit'));
       fixture.detectChanges();
     };
     const requestCode = (email = 'New@Cinesync.com ') => {
@@ -46,6 +52,13 @@ describe('ProfilePageComponent', () => {
     };
     return { fixture, root, type, submit, requestCode };
   }
+
+  it('has three titled sections in order: personal data, email and password', () => {
+    const { root } = create();
+    const headings = Array.from(root.querySelectorAll('h2')).map(h => h.textContent!.trim());
+    expect(headings).toEqual(['Datos personales', 'Correo electrónico', 'Contraseña']);
+    expect(root.querySelectorAll('section[aria-labelledby]').length).toBe(3);
+  });
 
   it('shows the current email and a labelled field for the new one', () => {
     const { root } = create();
@@ -69,7 +82,7 @@ describe('ProfilePageComponent', () => {
     expect(api.requestEmailChange).toHaveBeenCalledOnceWith({ email: 'new@cinesync.com' });
     const code = root.querySelector<HTMLInputElement>('#profile-code')!;
     expect(code.getAttribute('inputmode')).toBe('numeric');
-    expect(root.querySelector('[role="status"]')!.textContent).toContain('new@cinesync.com');
+    expect(root.querySelector('.email-section [role="status"]')!.textContent).toContain('new@cinesync.com');
     await fixture.whenStable();
     expect(document.activeElement).toBe(code);
   });
@@ -108,7 +121,7 @@ describe('ProfilePageComponent', () => {
     api.verifyEmailChange.and.returnValue(throwError(() => failure(400)));
     type('#profile-code', '111111');
     submit();
-    expect(root.querySelector('[role="alert"]')!.textContent).toContain('no es válido o ya venció');
+    expect(root.querySelector('.email-section [role="alert"]')!.textContent).toContain('no es válido o ya venció');
     expect(root.querySelector('#profile-code')!.getAttribute('aria-describedby')).toBe('profile-failure');
     expect(session.user()!.email).toBe('old@cinesync.com');
     const again = Array.from(root.querySelectorAll('button')).find(b => b.textContent!.includes('Volver a pedir un código'))!;
@@ -117,7 +130,7 @@ describe('ProfilePageComponent', () => {
     expect(root.querySelector('#profile-code')).toBeNull();
     expect(root.querySelector('#profile-email')).not.toBeNull();
     expect(fixture.componentInstance['codeForm'].getRawValue().verificationCode).toBe('');
-    expect(root.querySelector('[role="alert"]')).toBeNull();
+    expect(root.querySelector('.email-section [role="alert"]')).toBeNull();
   });
 
   it('goes back to the email step when the address was taken meanwhile', () => {
@@ -126,7 +139,7 @@ describe('ProfilePageComponent', () => {
     api.verifyEmailChange.and.returnValue(throwError(() => failure(409, 'EMAIL_ALREADY_REGISTERED')));
     type('#profile-code', '111111');
     submit();
-    expect(root.querySelector('[role="alert"]')!.textContent).toContain('Ese correo ya está en uso.');
+    expect(root.querySelector('.email-section [role="alert"]')!.textContent).toContain('Ese correo ya está en uso.');
     expect(root.querySelector('#profile-email')).not.toBeNull();
   });
 
@@ -146,7 +159,7 @@ describe('ProfilePageComponent', () => {
       const { root, requestCode } = create();
       api.requestEmailChange.and.returnValue(throwError(() => error));
       requestCode();
-      expect(root.querySelector('[role="alert"]')!.textContent).toContain(text);
+      expect(root.querySelector('.email-section [role="alert"]')!.textContent).toContain(text);
       expect(root.querySelector('#profile-code')).toBeNull();
     }
   });
