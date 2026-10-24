@@ -61,7 +61,7 @@ that it answers the allowed origin, stays silent for any other, and does not sta
 
 ## Authentication against csp-auth-api (HU-AUTH-003)
 
-The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.8.0). `AuthApiService` is the only class that talks to it;
+The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.9.0). `AuthApiService` is the only class that talks to it;
 the portal never compares or stores a password. Sign in and registration need the API, the gateway and the shell running.
 
 | Route (under `/auth`) | Behaviour |

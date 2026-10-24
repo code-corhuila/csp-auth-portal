@@ -36,6 +36,9 @@ describe('auth API requests against the contract requirements', () => {
     verifyEmailChange: () => api.verifyEmailChange({ verificationCode: '004217' }).subscribe(),
     listUsers: () => admin.list({ page: 1, limit: 20, email: '' }).subscribe(),
     updateUserRole: () => admin.setAdmin('user-1', true).subscribe(),
+    getMyProfile: () => api.getMyProfile().subscribe(),
+    updateMyProfile: () => api.updateMyProfile({ name: 'A B' }).subscribe(),
+    changeMyPassword: () => api.changeMyPassword({ currentPassword: 'OldPass123', newPassword: 'NewPass456' }).subscribe(),
   };
 
   beforeEach(() => {
