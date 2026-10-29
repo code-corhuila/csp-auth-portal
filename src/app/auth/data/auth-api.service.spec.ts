@@ -154,7 +154,7 @@ describe('AuthApiService', () => {
 
   it('posts the email to /forgot-password and completes on 202', () => {
     let completed = false;
-    service.requestPasswordReset({ email: 'nobody@cinesync.com' }).subscribe({ complete: () => (completed = true) });
+    service.requestPasswordReset({ email: 'nobody@cinesync.com' }, 'key-of-this-submission').subscribe({ complete: () => (completed = true) });
     const request = http.expectOne('/api/v1/auth/forgot-password');
     expect(request.request.body).toEqual({ email: 'nobody@cinesync.com' });
     request.flush(null, { status: 202, statusText: 'Accepted' });
@@ -202,11 +202,22 @@ describe('AuthApiService', () => {
     expect(caught?.code).toBe('EMAIL_ALREADY_REGISTERED');
   });
 
-  it('posts to /forgot-password without an Idempotency-Key, as the contract says', () => {
-    service.requestPasswordReset({ email: 'maria@cinesync.com' }).subscribe();
-    const request = http.expectOne('/api/v1/auth/forgot-password');
-    expect(request.request.headers.has('Idempotency-Key')).toBeFalse();
-    request.flush(null, { status: 202, statusText: 'Accepted' });
+  it('sends the given Idempotency-Key on /forgot-password, so a retry of the same submission repeats it', () => {
+    service.requestPasswordReset({ email: 'maria@cinesync.com' }, 'key-of-this-submission').subscribe();
+    service.requestPasswordReset({ email: 'maria@cinesync.com' }, 'key-of-this-submission').subscribe();
+    const [first, second] = http.match('/api/v1/auth/forgot-password');
+    expect(first.request.headers.get('Idempotency-Key')).toBe('key-of-this-submission');
+    expect(second.request.headers.get('Idempotency-Key')).toBe('key-of-this-submission');
+    first.flush(null, { status: 202, statusText: 'Accepted' });
+    second.flush(null, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('passes the 409 IDEMPOTENCY_KEY_CONFLICT of /forgot-password through untouched', () => {
+    let caught: ApiError | undefined;
+    service.requestPasswordReset({ email: 'maria@cinesync.com' }, 'key-of-this-submission').subscribe({ error: e => (caught = e) });
+    http.expectOne('/api/v1/auth/forgot-password').flush(shellError(409, 'IDEMPOTENCY_KEY_CONFLICT'), { status: 409, statusText: 'Conflict' });
+    expect(caught?.status).toBe(409);
+    expect(caught?.code).toBe('IDEMPOTENCY_KEY_CONFLICT');
   });
 
   it('posts the token and the new password to /reset-password without an Idempotency-Key and completes on 204', () => {

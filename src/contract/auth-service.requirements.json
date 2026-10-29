@@ -6,7 +6,7 @@
     { "operationId": "login", "method": "POST", "path": "/login", "requiredHeaders": [] },
     { "operationId": "refreshToken", "method": "POST", "path": "/refresh", "requiredHeaders": [] },
     { "operationId": "logout", "method": "POST", "path": "/logout", "requiredHeaders": [] },
-    { "operationId": "requestPasswordReset", "method": "POST", "path": "/forgot-password", "requiredHeaders": [] },
+    { "operationId": "requestPasswordReset", "method": "POST", "path": "/forgot-password", "requiredHeaders": ["Idempotency-Key"] },
     { "operationId": "resetPassword", "method": "POST", "path": "/reset-password", "requiredHeaders": [] },
     { "operationId": "requestEmailChange", "method": "PATCH", "path": "/me/email", "requiredHeaders": ["Idempotency-Key"] },
     { "operationId": "verifyEmailChange", "method": "POST", "path": "/me/email/verify", "requiredHeaders": ["Idempotency-Key"] },
