@@ -1,60 +1,128 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { ApiError } from '../../shell-contract';
-import { AuthResponse, ForgotPasswordRequest, LoginRequest, RegisterRequest } from '../model/auth';
-import { SyntheticUser, SYNTHETIC_USERS } from './synthetic-users';
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { catchError, Observable, throwError } from 'rxjs';
+import { ApiError, asApiError } from '../../shell-contract';
+import { AuthResponse, ChangePasswordRequest, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, ProfileResponse, RefreshRequest, RegisterRequest, ResetPasswordRequest, UpdateProfileRequest } from '../model/auth';
 
-const EXPIRES_IN_SECONDS = 3600;
+const BASE = '/api/v1/auth';
 
 /**
- * Cut 2: answers from the burned-in dataset, with no HTTP and no HttpClient of its own.
- * The real calls go through the SHELL's client against the relative paths
- * POST /api/v1/auth/login, /register and /forgot-password (auth-service 1.1.0);
- * the shell's interceptor adds the correlation id and normalises errors.
+ * Typed calls to csp-auth-api (auth-service 1.9.0). The injected HttpClient is the SHELL's:
+ * its interceptor completes the '/api/v1/...' path, attaches the correlation id and
+ * normalises every error. The portal never compares or keeps a password.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
-  private readonly users: SyntheticUser[] = [...SYNTHETIC_USERS];
+  private readonly http = inject(HttpClient);
 
   login(request: LoginRequest): Observable<AuthResponse> {
-    const user = this.users.find(u => u.email === request.email && u.password === request.password);
-    return user
-      ? of(toAuthResponse(user))
-      : throwError(() => apiError(401, 'INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.'));
+    return this.http.post<AuthResponse>(`${BASE}/login`, request).pipe(
+      catchError(err => throwError(() => withMessage(err, loginMessage))),
+    );
+  }
+
+  /** The contract rotates the refresh token: the answer carries the new one and the sent one stops working. */
+  refresh(request: RefreshRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${BASE}/refresh`, request);
+  }
+
+  /**
+   * Needs the Bearer token, which the shell's interceptor adds; revokes the refresh token sent.
+   * `keepalive` lets the browser finish it when the page is left right after (it takes effect with the fetch backend).
+   */
+  logout(request: LogoutRequest): Observable<void> {
+    return this.http.post<void>(`${BASE}/logout`, request, { keepalive: true });
   }
 
   register(request: RegisterRequest): Observable<AuthResponse> {
-    if (this.users.some(u => u.email === request.email)) {
-      return throwError(() => apiError(409, 'EMAIL_ALREADY_REGISTERED', 'Este correo ya está registrado.'));
-    }
-    const user: SyntheticUser = {
-      id: crypto.randomUUID(),
-      email: request.email,
-      password: request.password,
-      name: request.name,
-      phone: request.phone,
-      address: request.address,
-      roles: ['CLIENT'],
-    };
-    this.users.push(user);
-    return of(toAuthResponse(user));
+    return this.http.post<AuthResponse>(`${BASE}/register`, request, {
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    }).pipe(
+      catchError(err => throwError(() => withMessage(err, registerMessage))),
+    );
   }
 
-  /** Always succeeds: the contract answers 202 whether or not the account exists. */
-  requestPasswordReset(_request: ForgotPasswordRequest): Observable<void> {
-    return of(undefined);
+  /**
+   * The contract answers 202 whether or not the account exists (ADR-050) and requires the Idempotency-Key (ADR-050 amendment 2026-10-29):
+   * the caller owns the key of one submission, so a retry of that submission repeats it and the API replays the answer.
+   * The same key with another email is a 409 IDEMPOTENCY_KEY_CONFLICT.
+   */
+  requestPasswordReset(request: ForgotPasswordRequest, idempotencyKey: string): Observable<void> {
+    return this.http.post<void>(`${BASE}/forgot-password`, request, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    });
+  }
+
+  /**
+   * 204 when the token sets the new password; 401 INVALID_TOKEN has one body for an unknown, expired, used or superseded token.
+   * No Idempotency-Key: the token is single use (ADR-050). The token is never logged.
+   */
+  resetPassword(request: ResetPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${BASE}/reset-password`, request);
+  }
+
+  /**
+   * Needs the Bearer token and a fresh Idempotency-Key, which the contract requires and the API validates (8 to 128 characters).
+   * The contract answers 202 with no body; the code goes to the new address, never to this response.
+   */
+  requestEmailChange(request: EmailChangeRequest): Observable<void> {
+    return this.http.patch<void>(`${BASE}/me/email`, request, {
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
+  }
+
+  /**
+   * Needs the Bearer token and a fresh Idempotency-Key (required by the contract). 204 when the code confirms the pending change;
+   * every cause of an invalid code is the same 400.
+   */
+  verifyEmailChange(request: EmailVerificationRequest): Observable<void> {
+    return this.http.post<void>(`${BASE}/me/email/verify`, request, {
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
+  }
+
+  /** Needs the Bearer token. Read from the database, so it carries the phone and address that no token does (ADR-051). */
+  getMyProfile(): Observable<ProfileResponse> {
+    return this.http.get<ProfileResponse>(`${BASE}/me`);
+  }
+
+  /** Needs the Bearer token; the body holds only the fields that changed. No Idempotency-Key: the contract takes none (ADR-051). */
+  updateMyProfile(request: UpdateProfileRequest): Observable<ProfileResponse> {
+    return this.http.patch<ProfileResponse>(`${BASE}/me`, request);
+  }
+
+  /**
+   * Needs the Bearer token. 200 is a fresh session for this device (every other device loses its refresh token), so the caller
+   * must start it. A wrong current password is a 400 on `currentPassword`, never a 401 (ADR-051). No Idempotency-Key.
+   */
+  changeMyPassword(request: ChangePasswordRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${BASE}/me/password`, request);
   }
 }
 
-function toAuthResponse(user: SyntheticUser): AuthResponse {
-  return {
-    accessToken: `synthetic-access-${user.id}`,
-    refreshToken: `synthetic-refresh-${user.id}`,
-    expiresIn: EXPIRES_IN_SECONDS,
-    user: { id: user.id, email: user.email, name: user.name, roles: [...user.roles] },
-  };
+function withMessage(err: unknown, messageFor: (error: ApiError) => string | undefined): ApiError {
+  const error = asApiError(err);
+  return { ...error, userMessage: messageFor(error) ?? error.userMessage };
 }
 
-function apiError(status: number, code: string, userMessage: string): ApiError {
-  return { status, code, message: userMessage, details: [], traceId: 'synthetic', userMessage };
+function loginMessage(error: ApiError): string | undefined {
+  if (error.status === 401) {
+    return 'Correo o contraseña incorrectos.';
+  }
+  if (error.status === 423) {
+    return 'Tu cuenta está bloqueada temporalmente. Inténtalo más tarde.';
+  }
+  return error.status === 429 ? rateLimitedMessage(error.retryAfterSeconds) : undefined;
+}
+
+function rateLimitedMessage(retryAfterSeconds: number | undefined): string {
+  if (retryAfterSeconds === undefined) {
+    return 'Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos.';
+  }
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return `Demasiados intentos fallidos. Inténtalo de nuevo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`;
+}
+
+function registerMessage(error: ApiError): string | undefined {
+  return error.code === 'EMAIL_ALREADY_REGISTERED' ? 'Este correo ya está registrado.' : undefined;
 }

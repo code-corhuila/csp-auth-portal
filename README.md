@@ -36,8 +36,11 @@ npm test         # Karma + Jasmine
 npm run build
 ```
 
-The portal is a remote of the shell (`csp-front`) and exposes `./routes` and `./session` (the in-memory `AuthSessionService`, so the shell can tell whether a person
-signed in). It creates no HTTP client of its own: inside the shell it would use the shell's.
+The portal is a remote of the shell (`csp-front`) and exposes `./routes`, `./admin-routes` and `./session` (`AuthSessionService`, so the shell can tell whether a person
+signed in, read `accessToken()` to send the Bearer token, call `restore()` at startup and `signOut()` to leave; see "Session" below). Inside the shell it creates no HTTP client of its own: it uses the shell's, whose interceptor
+adds the gateway URL, the token, the `X-Correlation-Id` and normalises every error (`src/app/shell-contract.ts`). The portal never calls `provideHttpClient()` (Annex H),
+not even in the standalone run (`app.config.ts`): alone, the screens that call the API (login, registration, password recovery, administration) cannot work, so the root
+opens the placeholder billboard. Exercise them through the shell.
 
 ## Container
 
@@ -47,33 +50,54 @@ docker compose -f deploy/compose.yml up --build
 ```
 
 The image listens on port 4201. The shell loads this portal from another origin, so the container
-renders its CORS rule from the environment when it starts (ADR-026) and refuses to start without it:
+renders its CORS rule from the environment when it starts (ADR-026) and refuses to start without it, or when the value does not start with `^` and end with `$` (an unanchored regex would also allow longer origins):
 
 | Variable | Meaning | Development value |
 |---|---|---|
 | `CORS_ALLOWED_ORIGIN_REGEX` | Origins allowed to load `remoteEntry.json` and the modules of the portal | `^http://localhost:420[0-5]$` |
 
 `deploy/compose.yml` sets the development value when the variable is not defined. CI builds the image and checks
-that it answers the allowed origin, stays silent for any other, and does not start without the variable.
+that it answers the allowed origin, stays silent for any other, and does not start with an empty or an unanchored value.
 
-## Cut 2: synthetic users (HU-FE-AUTH-001)
+## Authentication against csp-auth-api (HU-AUTH-003)
 
-There is no `csp-auth-api` in Cut 2. The portal signs in against a dataset burned into
-`src/app/auth/data/synthetic-users.ts`. These are not real credentials.
-
-| Email | Password | Roles |
-|---|---|---|
-| `maria@cinesync.com` | `SecurePass123!` | `CLIENT` |
-| `admin@cinesync.com` | `SecurePass123!` | `CLIENT`, `ADMIN` |
-
-Registering a new account adds a `CLIENT` to the in-memory list; a page reload forgets it.
+The portal calls the real `csp-auth-api` through the gateway (`auth-service.yaml` 1.9.0). `AuthApiService` is the only class that talks to it;
+the portal never compares or stores a password. Sign in and registration need the API, the gateway and the shell running.
 
 | Route (under `/auth`) | Behaviour |
 |---|---|
-| `login` | Modal. Starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
-| `register` | Modal. Creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
-| `forgot-password` | Modal. Always confirms neutrally, whether or not the account exists |
+| `login` | Modal. `POST /api/v1/auth/login`; starts a session, shows a toast and goes to the `returnUrl` it was given, or to the billboard `/movies` |
+| `register` | Modal. `POST /api/v1/auth/register` with an `Idempotency-Key`; creates a `CLIENT` without signing in, then opens `login` with the email filled and a toast, as in the mockup |
+| `forgot-password` | Modal. `POST /api/v1/auth/forgot-password`; always confirms neutrally (202), whether or not the account exists. Sends a new `Idempotency-Key` (`crypto.randomUUID()`, via `IdempotencyKeyGenerator`) on every submission of the form (ADR-050 amendment 2026-10-29); the portal does not retry on its own, so a retry is a new click and a new key. A `409 IDEMPOTENCY_KEY_CONFLICT` or a `400` for the header show the generic Spanish message of an unexpected failure; `404` (no SMTP relay) and `429` (concurrency limit) show a generic Spanish message |
+| `reset-password` | Modal opened from the email link `/auth/reset-password#token=<uuid>` (HU-AUTH-006, ADR-050). The token is read from the URL fragment only (never the query string), kept in memory, never logged, and the address is replaced right away so the address bar and the history do not keep it. New password and confirmation follow the registration rules (8 to 72 bytes, one uppercase letter, one digit); `POST /api/v1/auth/reset-password` with no `Idempotency-Key`. `204` shows a confirmation with a link to login; `401 INVALID_TOKEN` (unknown, expired, used or superseded) offers a link to request a new one; `400` with the detail `password` / "The new password must differ from the current one" (contract 1.8.0, the token is not consumed) shows "La nueva contraseña debe ser distinta de la actual." and keeps the form and the token so another password can be typed; any other `400`, `404`, `429` and `5xx` show a generic Spanish message. A missing or malformed token shows the same "request a new link" option without calling the API |
+| `profile` | "Mi perfil", page for any signed-in role (`authGuard`), in three sections (HU-AUTH-007, ADR-051; HU-AUTH-004, ADR-034). **Datos personales**: `GET /api/v1/auth/me` loads name, phone and address (null for accounts created before they existed) and shows the email as read-only text; `PATCH /api/v1/auth/me` saves only the fields that changed, with the registration rules (name required up to 100, phone `^+?[0-9]{7,15}$`, address up to 255; a phone or an address that exists cannot be emptied); the fields named in `details[].field` of a `400` are marked. **Correo electrónico**: `PATCH /api/v1/auth/me/email` requests a change and `POST /api/v1/auth/me/email/verify` confirms it with the 6-digit code. **Contraseña**: current password, new password (registration rules, `password-rules.ts`) and confirmation; `POST /api/v1/auth/me/password` with no `Idempotency-Key`. A `200` is a fresh session and is started like a login (`AuthSessionService.start()`: new access token in memory, new refresh token in `sessionStorage`), because the API revokes every other refresh token. A wrong current password is a `400` on `currentPassword` (never a `401`, which the shell reads as an expired session) and marks that field; `newPassword` errors tell "must differ" apart from the rules; a `429` uses the `Retry-After` the shell exposes as `retryAfterSeconds` (`profile-error-message.ts`) |
 
-The session lives in memory (`AuthSessionService`). `authGuard` sends anonymous visitors to
+### Session (restore and renewal)
+
+`AuthSessionService` keeps the user and the access token in memory only. The refresh token is kept in `sessionStorage` (key `csp.auth.refresh`, never `localStorage`,
+so closing the tab ends the session) by `RefreshTokenStore`, which tolerates an unavailable storage and ignores a corrupted value. Tokens are never logged.
+
+| Member | Behaviour |
+|---|---|
+| `restore(): Promise<void>` | The shell calls it after connecting and waits for it before the first navigation. Without a kept token it resolves at once; otherwise it renews with `POST /api/v1/auth/refresh`. It resolves when the attempt finished, whatever the outcome, and never rejects |
+| `refresh(): Promise<void>` | Renews the tokens (the refresh token rotates: the new one is stored). Concurrent callers share one request. Never rejects |
+| automatic renewal | After each `start()` a timer renews the access token 60 s before the `expiresIn` the API returned (at least 5 s from now); `end()` cancels it |
+| `signOut(): Promise<void>` | Sends `POST /api/v1/auth/logout` with the refresh token (`keepalive: true`; the shell's interceptor adds the Bearer when the request is sent) and clears the memory and the storage right after, without waiting for the answer, so leaving the page cannot cancel the clearing; a failed call changes nothing |
+| `end()` | Clears the memory, the timer and the stored refresh token, without calling the API |
+
+When a renewal fails with `401` or `423` the session ends and the stored token is removed; a transient failure (status `0`, `5xx`, timeout) ends only the in-memory session and keeps the stored
+token, so a reload can retry. A person in an active session is told with a Spanish toast (sign in again, or reload to retry); a failed `restore()` at page load is silent: the guard sends
+the person to `/auth/login?returnUrl=...`.
+
+### Administration: user roles (`./admin-routes`)
+
+The second entry point, `src/app/auth/admin/admin.routes.ts` (`ADMIN_ROUTES`), is the `/admin/users` screen of `12-ux-ui/wireframes.md` section 6. The shell mounts it
+at `admin/users` (the users page is the empty path) behind `roleGuard`; run alone, `standalone.routes.ts` mounts it at the same address. An administrator searches
+accounts by email prefix (`GET /api/v1/auth/users?email=&page=&limit=`) and grants or revokes `ADMIN` after a confirmation
+(`PATCH /api/v1/auth/users/{userId}/role` with `{ "role": "ADMIN", "enabled": true|false }` and a fresh `Idempotency-Key`). A granted role is effective on the
+target's next login or token refresh; a revoked `ADMIN` ends every session of that user at once (ADR-031, amendment 2026-10-24), so the user signs in again as a normal user. The confirmation dialog and the success toast say which of the two applies. All the text of the screen is Spanish; failures are mapped by status and code to Spanish messages (`admin-error-message.ts`), never the server's text. `Revoke` is disabled for the only administrator when the list is the whole directory;
+otherwise the API decides and a `409 LAST_ADMIN` or `409 USER_WITHOUT_ROLES` is shown as an error toast and the list reloads. Role changes need the `user:role:update` permission, enforced by the API.
+
+The session lives in memory (`AuthSessionService`: the user summary and the access token; the refresh token is not kept). `authGuard` sends anonymous visitors to
 `/auth/login?returnUrl=...`; `roleGuard` opens `/admin` only for `ADMIN` and sends any other
 session to `/movies`. The look follows `12-ux-ui/design-system.md` of `csp-docs`.

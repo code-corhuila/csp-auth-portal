@@ -8,6 +8,69 @@ and is tagged `v<version>` once it is merged.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-15
+
+### Fixed
+
+- The confirmation dialog and the success toast of "Quitar administrador" no longer say the change applies on the next login: removing `ADMIN` ends the sessions of that user at once (HU-AUTH-003 Scenario 4, ADR-031 amendment 2026-10-24), so they say the session closes and the user must sign in again. The text for granting `ADMIN` is unchanged ([#85](https://github.com/code-corhuila/csp-auth-portal/issues/85)).
+- `AuthSessionService.signOut()` forgets the session and the stored refresh token right after sending `POST /api/v1/auth/logout`, without waiting for the answer, and the request is sent with `keepalive: true`; before, a page left at once cancelled the request and the kept refresh token restored the session on the next load (code-corhuila/csp-auth-api#168).
+
+### Added
+
+- `POST /api/v1/auth/forgot-password` sends an `Idempotency-Key` (`crypto.randomUUID()` through `IdempotencyKeyGenerator`), one per submission of the form, as norm 5.3.8 requires (HU-AUTH-006, ADR-050 amendment 2026-10-29). `AuthApiService.requestPasswordReset()` takes the key from its caller, so a retry of the same submission can repeat it; the portal does not retry on its own today. A `409 IDEMPOTENCY_KEY_CONFLICT` or a `400` for the header show the existing generic failure message. The requests table checked against the auth contract now lists the header for this operation (`auth-service` 1.13.0). `POST /reset-password` and `POST /me/password` are unchanged.
+- "Mi perfil" in three sections (HU-AUTH-007, ADR-051, `auth-service` 1.9.0): **Datos personales** loads the profile with `GET /api/v1/auth/me` (`AuthApiService.getMyProfile()`) and edits name, phone and address with `PATCH /api/v1/auth/me` (`updateMyProfile()`), sending only what changed, with the registration rules and the fields named by a `400` marked; **Correo electrónico** keeps the verified change of HU-AUTH-004 untouched; **Contraseña** changes it with `POST /api/v1/auth/me/password` (`changeMyPassword()`, no `Idempotency-Key`), and the `200` fresh session is started like a login so this device stays signed in while the API revokes the others. A wrong current password is a field error (`400` on `currentPassword`, never read as an expired session), "must differ" and the password rules are told apart, and a `429` shows the `Retry-After` wait (`profile-error-message.ts`: `passwordChangeFailure()`, `profileDataFailure()`). The route title is now "Mi perfil".
+- `AuthApiService.getMyProfile()` / `updateMyProfile()` / `changeMyPassword()` for `GET` and `PATCH /api/v1/auth/me` and `POST /api/v1/auth/me/password` (HU-AUTH-007, ADR-051, `auth-service` 1.9.0; none takes an `Idempotency-Key`), and the Spanish messages of their failures (`profile-error-message.ts`: `passwordChangeFailure()`, `profileDataFailure()`); a wrong current password is a `400` on `currentPassword`, never read as an expired session, and a `429` shows the `Retry-After` wait. The three operations join the requests table checked against the auth contract (`npm run test:contract` against `auth-service` 1.9.0).
+- `/auth/reset-password` page (HU-AUTH-006, ADR-050): reads the token from the URL fragment `#token=<uuid>` (never the query string), replaces the address so the token does not stay in the address bar or the history, and sets the new password with `POST /api/v1/auth/reset-password` (`AuthApiService.resetPassword()`, no `Idempotency-Key`). The form asks for the password and its confirmation with the registration rules (8 to 72 bytes, one uppercase letter, one digit; `password-rules.ts`). `204` confirms and links to login; `401 INVALID_TOKEN` and a missing or malformed token offer a link to request a new one; `400`, `404`, `429` and `5xx` show Spanish messages decided by the portal (`password-reset-error-message.ts`). The forgot-password page uses the same messages for its failures instead of the text of the shell.
+- Reset password page (HU-AUTH-006, ADR-050 amendment, `auth-service` 1.8.0): a `400 VALIDATION_ERROR` whose detail is `password` / "The new password must differ from the current one" shows "La nueva contraseña debe ser distinta de la actual." (`password-reset-error-message.ts`); the token is not consumed, so the form stays editable and the same token is sent with the next password. Any other `400` keeps the generic weak-password message.
+- `resetPassword` joins the requests table checked against the auth contract (`src/contract/auth-service.requirements.json`, `npm run test:contract`); `AuthApiService` documents `auth-service` 1.7.0.
+- The login says how long to wait after the failed-attempts limit (HU-AUTH-005, [csp-auth-portal#71](https://github.com/code-corhuila/csp-auth-portal/issues/71)): a `429` that carries `retryAfterSeconds` (the `Retry-After` of the auth API, read by the shell) shows "Demasiados intentos fallidos. Inténtalo de nuevo en N minutos.", with the seconds rounded up to whole minutes and "1 minuto" in the singular. Without the value the text keeps saying "en unos minutos". `shell-contract.ts` declares the optional `retryAfterSeconds` of `ApiError`.
+- `/auth/profile` page (any signed-in role, behind `authGuard`): shows the current email and changes it in two steps, a form that requests the change (`PATCH /api/v1/auth/me/email`, `202`) and a
+  6-digit code form that confirms it (`POST /api/v1/auth/me/email/verify`, `204`). The code is a string (leading zeros kept), is never logged or stored, and takes the focus after the request.
+  Every cause of an invalid code shows one generic Spanish message with an option to request a new code; `409` (address in use, also at the confirmation), `429`, `401` and network failures are
+  mapped to Spanish messages (`profile-error-message.ts`); the success toast and the displayed email use the confirmed address (HU-AUTH-004, [#56](https://github.com/code-corhuila/csp-auth-portal/issues/56)).
+- `AuthApiService.requestEmailChange()` / `verifyEmailChange()` and `AuthSessionService.updateEmail()`.
+- The session survives a reload and is renewed: the refresh token is kept in `sessionStorage` (never `localStorage`), `AuthSessionService.restore()` renews the session at startup with
+  `POST /api/v1/auth/refresh`, the access token is renewed 60 s before it expires (one request in flight, shared by concurrent callers), the refresh token rotates on every renewal,
+  and `signOut()` revokes it with `POST /api/v1/auth/logout` and clears the storage even if the call fails. A rejected token (`401`, `423`) ends the session; a transient failure keeps the stored token; a failed restore at page load is silent and only a failed renewal in an active session shows a toast
+  (HU-AUTH-003, [#50](https://github.com/code-corhuila/csp-auth-portal/issues/50)).
+- `RefreshTokenStore` and `AuthApiService.refresh()` / `logout()`.
+- `/admin/users` page, exposed to the shell as `./admin-routes` (`ADMIN_ROUTES`, guarded by `roleGuard`): an administrator searches accounts by email prefix,
+  pages through them and grants or revokes `ADMIN` after a confirmation dialog. Loading, empty and error states; the last-administrator conflict
+  (`409 LAST_ADMIN`) and a user left without roles (`409 USER_WITHOUT_ROLES`) are error toasts; the success toast states that the role takes effect at the next login or token refresh
+  (HU-AUTH-003, [#42](https://github.com/code-corhuila/csp-auth-portal/issues/42)).
+- `UsersAdminApiService` (`GET /api/v1/auth/users`, `PATCH /api/v1/auth/users/{userId}/role` with an `Idempotency-Key`) and the toast type `error`.
+- `AuthModalComponent` accepts `closeLabel` and focuses the element marked `data-initial-focus` before the first field.
+
+### Fixed
+
+- A contract check keeps the requests of the portal equal to what `auth-service.yaml` requires: `src/contract/auth-service.requirements.json` lists the operations the portal calls and their required headers, `scripts/check-contract.mjs` (`npm run test:contract`, with `AUTH_CONTRACT_FILE`) compares that table with the contract in CI, and `auth-api.contract.spec.ts` makes every call and checks the headers, which would have caught the missing `Idempotency-Key` of the email change (HU-AUTH-004, [#68](https://github.com/code-corhuila/csp-auth-portal/issues/68)).
+- The email change sends the `Idempotency-Key` header that the contract requires on `PATCH /api/v1/auth/me/email` and `POST /api/v1/auth/me/email/verify`: the API answers `400` without it, so the profile page could not change an email (HU-AUTH-004, [#65](https://github.com/code-corhuila/csp-auth-portal/issues/65)).
+- Login shows a Spanish message when the API limits failed attempts (`429`, `RATE_LIMITED` or the gateway's `TOO_MANY_REQUESTS`): "Demasiados intentos fallidos. Inténtalo de nuevo en unos minutos." The shell's `ApiError` does not expose `Retry-After`, so the message carries no time (HU-AUTH-005, [#63](https://github.com/code-corhuila/csp-auth-portal/issues/63)).
+
+### Changed
+
+- The container refuses to start when `CORS_ALLOWED_ORIGIN_REGEX` does not start with `^` and end with `$`, the CI checks an empty and two unanchored values, and the `.json` location serves `remoteEntry.json` only, not `importmap.json` (ADR-026 Amendment 2026-10-19, [#58](https://github.com/code-corhuila/csp-auth-portal/issues/58)).
+- `AuthSessionService` no longer is "memory only": it keeps the refresh token in `sessionStorage`; the access token stays in memory
+  ([#50](https://github.com/code-corhuila/csp-auth-portal/issues/50)).
+- The standalone configuration no longer provides `provideHttpClient()` (Annex H, as the catalog and booking portals); the standalone root opens the placeholder billboard because the screens
+  that call the API need the shell's client ([#50](https://github.com/code-corhuila/csp-auth-portal/issues/50)).
+- Sign in, registration and password recovery call `csp-auth-api` through the shell's HTTP client (`POST /api/v1/auth/login`, `/register` with an
+  `Idempotency-Key`, `/forgot-password`) instead of answering from a dataset; the portal no longer compares or stores a password
+  (HU-AUTH-003, [#39](https://github.com/code-corhuila/csp-auth-portal/issues/39)).
+- `AuthSessionService` keeps the access token in memory and exposes it through `./session` as `accessToken()`, so the shell can send the Bearer token.
+- The password recovery page shows the failure (for example `429`) instead of staying blocked.
+
+### Removed
+
+- `synthetic-users.ts` and the synthetic dataset: nothing else used it. The specs build their sessions from fixtures.
+
+### Fixed
+
+- The user roles screen (`/admin/users`) is entirely in Spanish: labels, roles (Administrador, Cliente), dialog, toasts, states and `aria` texts. Its failures are
+  explained by status and error code (`admin-error-message.ts`) and never show the English text of the server
+  ([#47](https://github.com/code-corhuila/csp-auth-portal/issues/47)).
+- Container healthcheck calls `http://127.0.0.1/health` instead of `http://localhost/health` (`deploy/Dockerfile` and `deploy/compose.yml`): inside the container `localhost` resolves first to `::1`, nginx listens on IPv4 only, and Docker reported the portal as `unhealthy` while it served traffic (TD-025).
+
 ## [2.0.0] - 2026-10-08
 
 MVP 2 (Cut 2). Story HU-FE-AUTH-001 ([csp-docs#93](https://github.com/code-corhuila/csp-docs/issues/93), story issue
