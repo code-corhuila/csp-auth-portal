@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
 import { LOGIN_PATH } from '../auth-paths';
 import { AuthApiService } from '../data/auth-api.service';
+import { IdempotencyKeyGenerator } from '../data/idempotency-key-generator';
 import { passwordResetErrorMessage } from '../password-reset-error-message';
 import { AuthModalComponent } from '../ui/auth-modal.component';
 
@@ -38,6 +39,7 @@ import { AuthModalComponent } from '../ui/auth-modal.component';
 export class ForgotPasswordPageComponent {
   private readonly api = inject(AuthApiService);
   private readonly router = inject(Router);
+  private readonly keys = inject(IdempotencyKeyGenerator);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -63,7 +65,8 @@ export class ForgotPasswordPageComponent {
     }
     this.pending.set(true);
     this.failure.set(null);
-    this.api.requestPasswordReset(this.form.getRawValue()).subscribe({
+    // One key per submission; the portal does not retry on its own, so each click of the person is a new submission.
+    this.api.requestPasswordReset(this.form.getRawValue(), this.keys.next()).subscribe({
       next: () => {
         this.sent.set(true);
         this.pending.set(false);
