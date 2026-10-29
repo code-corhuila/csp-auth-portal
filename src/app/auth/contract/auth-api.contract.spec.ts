@@ -30,7 +30,7 @@ describe('auth API requests against the contract requirements', () => {
     login: () => api.login({ email: 'a@cinesync.com', password: 'SecurePass123!' }).subscribe({ error: () => undefined }),
     refreshToken: () => api.refresh({ refreshToken: 'refresh' }).subscribe(),
     logout: () => api.logout({ refreshToken: 'refresh' }).subscribe(),
-    requestPasswordReset: () => api.requestPasswordReset({ email: 'a@cinesync.com' }).subscribe(),
+    requestPasswordReset: () => api.requestPasswordReset({ email: 'a@cinesync.com' }, crypto.randomUUID()).subscribe(),
     resetPassword: () => api.resetPassword({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c', password: 'SecurePass123!' }).subscribe(),
     requestEmailChange: () => api.requestEmailChange({ email: 'b@cinesync.com' }).subscribe(),
     verifyEmailChange: () => api.verifyEmailChange({ verificationCode: '004217' }).subscribe(),

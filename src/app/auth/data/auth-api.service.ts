@@ -42,9 +42,15 @@ export class AuthApiService {
     );
   }
 
-  /** The contract answers 202 whether or not the account exists; the operation takes no Idempotency-Key (ADR-050). */
-  requestPasswordReset(request: ForgotPasswordRequest): Observable<void> {
-    return this.http.post<void>(`${BASE}/forgot-password`, request);
+  /**
+   * The contract answers 202 whether or not the account exists (ADR-050) and requires the Idempotency-Key (ADR-050 amendment 2026-10-29):
+   * the caller owns the key of one submission, so a retry of that submission repeats it and the API replays the answer.
+   * The same key with another email is a 409 IDEMPOTENCY_KEY_CONFLICT.
+   */
+  requestPasswordReset(request: ForgotPasswordRequest, idempotencyKey: string): Observable<void> {
+    return this.http.post<void>(`${BASE}/forgot-password`, request, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    });
   }
 
   /**
