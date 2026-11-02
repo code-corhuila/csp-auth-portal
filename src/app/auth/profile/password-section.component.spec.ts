@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from '../../shell-contract';
+import { AccessRecheck } from '../guards/access-recheck.service';
 import { AuthApiService } from '../data/auth-api.service';
 import { RefreshTokenStore } from '../data/refresh-token-store';
 import { AuthSessionService } from '../data/session-store';
@@ -19,6 +20,7 @@ const rejected = (status: number, field?: string, message = 'English', retryAfte
 });
 
 describe('PasswordSectionComponent', () => {
+  const recheck = { afterRefusal: jasmine.createSpy('afterRefusal').and.resolveTo() };
   const api = { changeMyPassword: jasmine.createSpy('changeMyPassword') };
   let toasts: jasmine.Spy;
   let session: AuthSessionService;
@@ -27,7 +29,7 @@ describe('PasswordSectionComponent', () => {
     sessionStorage.clear();
     api.changeMyPassword.calls.reset();
     api.changeMyPassword.and.returnValue(of(freshSession));
-    TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }] });
+    TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }, { provide: AccessRecheck, useValue: recheck }] });
     toasts = spyOn(TestBed.inject(ToastService), 'show');
     session = TestBed.inject(AuthSessionService);
     session.start({ accessToken: 'old-access', refreshToken: 'old-refresh', expiresIn: 3600, user: { id: '1', email: 'maria@cinesync.com', roles: ['CLIENT'] } });
@@ -134,5 +136,14 @@ describe('PasswordSectionComponent', () => {
     change();
     change();
     expect(api.changeMyPassword).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks the session when the API refuses the change', () => {
+    recheck.afterRefusal.calls.reset();
+    const { change } = create();
+    const refused = rejected(401);
+    api.changeMyPassword.and.returnValue(throwError(() => refused));
+    change();
+    expect(recheck.afterRefusal).toHaveBeenCalledOnceWith(refused);
   });
 });
