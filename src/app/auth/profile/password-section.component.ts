@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { asApiError } from '../../shell-contract';
+import { AccessRecheck } from '../guards/access-recheck.service';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { PASSWORD_RULES_HINT, passwordRules } from '../password-rules';
@@ -62,6 +63,7 @@ export class PasswordSectionComponent {
   private readonly api = inject(AuthApiService);
   private readonly session = inject(AuthSessionService);
   private readonly toasts = inject(ToastService);
+  private readonly recheck = inject(AccessRecheck);
   private readonly submitted = signal(false);
   private readonly rejection = signal<PasswordChangeFailure | null>(null);
 
@@ -119,8 +121,10 @@ export class PasswordSectionComponent {
         this.toasts.show('Tu contraseña se actualizó. Cerramos tus otras sesiones.', 'success');
       },
       error: err => {
-        this.rejection.set(passwordChangeFailure(asApiError(err)));
+        const error = asApiError(err);
+        this.rejection.set(passwordChangeFailure(error));
         this.pending.set(false);
+        void this.recheck.afterRefusal(error);
       },
     });
   }

@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from '../../shell-contract';
+import { AccessRecheck } from '../guards/access-recheck.service';
 import { AuthApiService } from '../data/auth-api.service';
 import { ProfileResponse } from '../model/auth';
 import { ToastService } from '../ui/toast.service';
@@ -15,6 +16,7 @@ const rejected = (status: number, fields: string[] = []): ApiError => ({
 });
 
 describe('ProfileDataSectionComponent', () => {
+  const recheck = { afterRefusal: jasmine.createSpy('afterRefusal').and.resolveTo() };
   const api = { getMyProfile: jasmine.createSpy('getMyProfile'), updateMyProfile: jasmine.createSpy('updateMyProfile') };
   let toasts: jasmine.Spy;
 
@@ -22,7 +24,7 @@ describe('ProfileDataSectionComponent', () => {
     api.getMyProfile.calls.reset();
     api.updateMyProfile.calls.reset();
     api.getMyProfile.and.returnValue(of(profile));
-    TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }] });
+    TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }, { provide: AccessRecheck, useValue: recheck }] });
     toasts = spyOn(TestBed.inject(ToastService), 'show');
   });
 
@@ -157,5 +159,21 @@ describe('ProfileDataSectionComponent', () => {
     submit();
     submit();
     expect(api.updateMyProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks the session when the API refuses the load or the save', () => {
+    recheck.afterRefusal.calls.reset();
+    const refusedLoad = rejected(401);
+    api.getMyProfile.and.returnValue(throwError(() => refusedLoad));
+    create();
+    expect(recheck.afterRefusal).toHaveBeenCalledOnceWith(refusedLoad);
+    recheck.afterRefusal.calls.reset();
+    api.getMyProfile.and.returnValue(of(profile));
+    const { type, submit } = create();
+    const refusedSave = rejected(401);
+    api.updateMyProfile.and.returnValue(throwError(() => refusedSave));
+    type('profile-name', 'Otro Nombre');
+    submit();
+    expect(recheck.afterRefusal).toHaveBeenCalledOnceWith(refusedSave);
   });
 });

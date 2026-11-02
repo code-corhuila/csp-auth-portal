@@ -2,6 +2,7 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { asApiError } from '../../../shell-contract';
+import { AccessRecheck } from '../../guards/access-recheck.service';
 import { Role, UserSummary } from '../../model/user';
 import { AuthModalComponent } from '../../ui/auth-modal.component';
 import { ToastService } from '../../ui/toast.service';
@@ -128,6 +129,7 @@ const isAdmin = (user: UserSummary): boolean => user.roles.includes('ADMIN');
 export class AdminUsersPageComponent implements OnInit {
   private readonly api = inject(UsersAdminApiService);
   private readonly toasts = inject(ToastService);
+  private readonly recheck = inject(AccessRecheck);
   private request?: Subscription;
   private trigger: HTMLElement | null = null;
   private pageNumber = 1;
@@ -202,8 +204,10 @@ export class AdminUsersPageComponent implements OnInit {
         this.phase.set('ready');
       },
       error: err => {
-        this.failure.set(adminErrorMessage(asApiError(err)));
+        const error = asApiError(err);
+        this.failure.set(adminErrorMessage(error));
         this.phase.set('failed');
+        void this.recheck.afterRefusal(error, 'ADMIN');
       },
     });
   }
@@ -242,6 +246,7 @@ export class AdminUsersPageComponent implements OnInit {
         if (error.status === 409) {
           this.load();
         }
+        void this.recheck.afterRefusal(error, 'ADMIN');
       },
     });
   }
