@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { asApiError } from '../../shell-contract';
+import { SESSION_COPY } from '../copy/auth-copy';
 import { AuthResponse } from '../model/auth';
 import { Role, UserSummary } from '../model/user';
 import { ToastService } from '../ui/toast.service';
@@ -10,9 +11,6 @@ import { RefreshTokenStore } from './refresh-token-store';
 /** The access token is renewed this long before it expires, and never sooner than MIN_RENEWAL_DELAY_SECONDS from now. */
 const RENEWAL_MARGIN_SECONDS = 60;
 const MIN_RENEWAL_DELAY_SECONDS = 5;
-
-const SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Inicia sesión de nuevo.';
-const RENEWAL_FAILED_MESSAGE = 'No pudimos renovar tu sesión por un problema de conexión. Recarga la página para reintentar.';
 
 /**
  * Session of the portal. The user and the access token live in memory; the refresh token is kept by
@@ -127,7 +125,7 @@ export class AuthSessionService {
       this.suspend();
     }
     if (wasActive) {
-      this.toasts.show(rejected ? SESSION_EXPIRED_MESSAGE : RENEWAL_FAILED_MESSAGE, 'error');
+      this.toasts.show(rejected ? SESSION_COPY.expired : SESSION_COPY.renewalFailed, 'error');
     }
   }
 

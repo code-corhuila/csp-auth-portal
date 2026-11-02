@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { LOGIN_PATH } from './auth-paths';
+import { LOGIN_COPY, REGISTER_COPY } from './copy/auth-copy';
 import { AuthApiService } from './data/auth-api.service';
 import { AuthSessionService } from './data/session-store';
 import { AuthResponse, LoginRequest, RegisterRequest } from './model/auth';
@@ -25,7 +26,7 @@ export class SignInFlow {
     return this.api.login(credentials).pipe(
       tap(response => {
         this.session.start(response);
-        this.toasts.show('Sesión iniciada correctamente.', 'success');
+        this.toasts.show(LOGIN_COPY.signedIn, 'success');
         void this.router.navigateByUrl(safeReturnUrl(returnUrl));
       }),
     );
@@ -35,7 +36,7 @@ export class SignInFlow {
   register(request: RegisterRequest): Observable<AuthResponse> {
     return this.api.register(request).pipe(
       tap(() => {
-        this.toasts.show('Registro exitoso. Ahora inicia sesión con tus datos.', 'success');
+        this.toasts.show(REGISTER_COPY.registered, 'success');
         void this.router.navigateByUrl(LOGIN_PATH, { state: { email: request.email } });
       }),
     );
