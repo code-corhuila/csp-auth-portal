@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { ApiError } from '../../../shell-contract';
+import { AccessRecheck } from '../../guards/access-recheck.service';
 import { UserSummary } from '../../model/user';
 import { ToastService } from '../../ui/toast.service';
 import { UsersAdminApiService } from '../data/users-admin-api.service';
@@ -20,6 +21,7 @@ const apiError = (status: number, code: string, userMessage: string): ApiError =
   ({ status, code, message: userMessage, details: [], traceId: 't', userMessage });
 
 describe('AdminUsersPageComponent', () => {
+  const recheck = { afterRefusal: jasmine.createSpy('afterRefusal').and.resolveTo() };
   let lists: { query: UserQuery; reply: Subject<UserPage> }[];
   let patches: { id: string; enabled: boolean; reply: Subject<UserSummary> }[];
   let toasts: jasmine.Spy;
@@ -40,7 +42,7 @@ describe('AdminUsersPageComponent', () => {
         return reply;
       },
     };
-    TestBed.configureTestingModule({ providers: [{ provide: UsersAdminApiService, useValue: api }] });
+    TestBed.configureTestingModule({ providers: [{ provide: UsersAdminApiService, useValue: api }, { provide: AccessRecheck, useValue: recheck }] });
     toasts = spyOn(TestBed.inject(ToastService), 'show');
     const created = TestBed.createComponent(AdminUsersPageComponent);
     created.detectChanges();
@@ -275,6 +277,25 @@ describe('AdminUsersPageComponent', () => {
       expect(toasts).toHaveBeenCalledWith('No tienes permiso para hacer esto.', 'error');
       expect(rowButton(0).textContent).toContain('Dar administrador');
       expect(lists.length).toBe(1);
+    });
+  });
+
+  describe('when the API refuses the session', () => {
+    beforeEach(() => recheck.afterRefusal.calls.reset());
+
+    it('rechecks the ADMIN role after the list is refused', () => {
+      const refused = apiError(403, 'FORBIDDEN', 'x');
+      latest().reply.error(refused);
+      expect(recheck.afterRefusal).toHaveBeenCalledOnceWith(refused, 'ADMIN');
+    });
+
+    it('rechecks the ADMIN role after a role change is refused', () => {
+      settle([maria, lopez, root], { total: 3 });
+      click('tbody tr:first-child .btn');
+      click('.dialog-actions .btn-primary');
+      const refused = apiError(401, 'UNAUTHORIZED', 'x');
+      patches[0].reply.error(refused);
+      expect(recheck.afterRefusal).toHaveBeenCalledOnceWith(refused, 'ADMIN');
     });
   });
 });

@@ -1,6 +1,7 @@
 import { afterNextRender, Component, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { asApiError } from '../../shell-contract';
+import { AccessRecheck } from '../guards/access-recheck.service';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { ToastService } from '../ui/toast.service';
@@ -69,6 +70,7 @@ import { EmailChangeStep, profileErrorMessage } from './profile-error-message';
 export class ProfilePageComponent {
   private readonly api = inject(AuthApiService);
   private readonly toasts = inject(ToastService);
+  private readonly recheck = inject(AccessRecheck);
   private readonly injector = inject(Injector);
   private readonly forms = inject(FormBuilder).nonNullable;
   private readonly codeInput = viewChild<ElementRef<HTMLInputElement>>('codeInput');
@@ -158,5 +160,6 @@ export class ProfilePageComponent {
     }
     this.pending.set(false);
     this.failure.set(message);
+    void this.recheck.afterRefusal(error);
   }
 }

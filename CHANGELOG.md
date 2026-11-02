@@ -47,6 +47,7 @@ and is tagged `v<version>` once it is merged.
 
 ### Changed
 
+- The client-side guards are no longer the only check of a protected screen: when `csp-auth-api` refuses a call of `/admin/users` or `/auth/profile` (`401` or `403`), `AccessRecheck` renews the session (`POST /auth/refresh`) and leaves the screen if the session no longer deserves it, to login (keeping `returnUrl`) when the session ended and to the billboard when `ADMIN` was revoked; any other failure keeps showing its message. `authGuard` and `roleGuard` are unchanged and documented as what the interface shows (HU-FE-AUTH-001, [#39](https://github.com/code-corhuila/csp-auth-portal/issues/39), item 3).
 - The container refuses to start when `CORS_ALLOWED_ORIGIN_REGEX` does not start with `^` and end with `$`, the CI checks an empty and two unanchored values, and the `.json` location serves `remoteEntry.json` only, not `importmap.json` (ADR-026 Amendment 2026-10-19, [#58](https://github.com/code-corhuila/csp-auth-portal/issues/58)).
 - `AuthSessionService` no longer is "memory only": it keeps the refresh token in `sessionStorage`; the access token stays in memory
   ([#50](https://github.com/code-corhuila/csp-auth-portal/issues/50)).
