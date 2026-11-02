@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from '../../shell-contract';
+import { AccessRecheck } from '../guards/access-recheck.service';
 import { AuthApiService } from '../data/auth-api.service';
 import { AuthSessionService } from '../data/session-store';
 import { ToastService } from '../ui/toast.service';
@@ -10,6 +11,7 @@ const failure = (status: number, code = 'X'): ApiError =>
   ({ status, code, message: 'English', details: [], traceId: 't', userMessage: 'English' });
 
 describe('ProfilePageComponent', () => {
+  const recheck = { afterRefusal: jasmine.createSpy('afterRefusal').and.resolveTo() };
   const api = {
     requestEmailChange: jasmine.createSpy('requestEmailChange'),
     verifyEmailChange: jasmine.createSpy('verifyEmailChange'),
@@ -25,7 +27,7 @@ describe('ProfilePageComponent', () => {
     api.requestEmailChange.and.returnValue(of(undefined));
     api.verifyEmailChange.and.returnValue(of(undefined));
     api.getMyProfile.and.returnValue(new Observable());
-    TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }] });
+    TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }, { provide: AccessRecheck, useValue: recheck }] });
     toasts = spyOn(TestBed.inject(ToastService), 'show');
     session = TestBed.inject(AuthSessionService);
     session.start({ accessToken: 't', refreshToken: 'r', expiresIn: 3600, user: { id: '1', email: 'old@cinesync.com', roles: ['CLIENT'] } });
@@ -153,7 +155,7 @@ describe('ProfilePageComponent', () => {
     ];
     for (const [error, text] of cases) {
       TestBed.resetTestingModule();
-      TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }] });
+      TestBed.configureTestingModule({ providers: [{ provide: AuthApiService, useValue: api }, { provide: AccessRecheck, useValue: recheck }] });
       spyOn(TestBed.inject(ToastService), 'show');
       TestBed.inject(AuthSessionService).start({ accessToken: 't', refreshToken: 'r', expiresIn: 3600, user: { id: '1', email: 'old@cinesync.com', roles: ['CLIENT'] } });
       const { root, requestCode } = create();
@@ -170,5 +172,14 @@ describe('ProfilePageComponent', () => {
     requestCode();
     submit();
     expect(api.requestEmailChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks the session when the API refuses the email change', () => {
+    recheck.afterRefusal.calls.reset();
+    const { requestCode } = create();
+    const refused = failure(401);
+    api.requestEmailChange.and.returnValue(throwError(() => refused));
+    requestCode();
+    expect(recheck.afterRefusal).toHaveBeenCalledOnceWith(refused);
   });
 });
