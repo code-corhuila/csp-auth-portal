@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
 import { BILLBOARD_PATH, FORGOT_PASSWORD_PATH, REGISTER_PATH } from '../auth-paths';
+import { LOGIN_COPY } from '../copy/auth-copy';
 import { SignInFlow } from '../sign-in-flow.service';
 import { AuthModalComponent } from '../ui/auth-modal.component';
 
@@ -13,31 +14,31 @@ import { AuthModalComponent } from '../ui/auth-modal.component';
   imports: [ReactiveFormsModule, RouterLink, AuthModalComponent],
   styleUrl: './auth-form.css',
   template: `
-    <app-auth-modal title="Iniciar sesión" titleId="login-title" (closed)="close()">
+    <app-auth-modal [title]="copy.title" titleId="login-title" (closed)="close()">
       <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div class="form-group">
-          <label for="login-email">Correo electrónico</label>
-          <input id="login-email" class="form-input" type="email" autocomplete="username" placeholder="usuario@cinesync.com"
+          <label for="login-email">{{ copy.email }}</label>
+          <input id="login-email" class="form-input" type="email" autocomplete="username" [placeholder]="copy.emailPlaceholder"
                  formControlName="email" [attr.aria-describedby]="showError('email') ? 'login-email-error' : null" />
           @if (showError('email')) {
-            <span id="login-email-error" class="field-error">Ingresa un correo válido.</span>
+            <span id="login-email-error" class="field-error">{{ copy.emailInvalid }}</span>
           }
         </div>
         <div class="form-group">
-          <label for="login-password">Contraseña</label>
-          <input id="login-password" class="form-input" type="password" autocomplete="current-password" placeholder="••••••••"
+          <label for="login-password">{{ copy.password }}</label>
+          <input id="login-password" class="form-input" type="password" autocomplete="current-password" [placeholder]="copy.passwordPlaceholder"
                  formControlName="password" [attr.aria-describedby]="showError('password') ? 'login-password-error' : null" />
           @if (showError('password')) {
-            <span id="login-password-error" class="field-error">Ingresa tu contraseña.</span>
+            <span id="login-password-error" class="field-error">{{ copy.passwordRequired }}</span>
           }
         </div>
         @if (failure(); as message) {
           <p class="form-error" role="alert">{{ message }}</p>
         }
-        <button class="btn-primary" type="submit" [disabled]="pending()">Ingresar</button>
+        <button class="btn-primary" type="submit" [disabled]="pending()">{{ copy.submit }}</button>
       </form>
-      <p class="auth-switch"><a [routerLink]="forgotPasswordPath">¿Olvidaste tu contraseña?</a></p>
-      <p class="auth-switch">¿Aún no tienes cuenta? <a [routerLink]="registerPath">Regístrate aquí</a></p>
+      <p class="auth-switch"><a [routerLink]="forgotPasswordPath">{{ copy.forgotPassword }}</a></p>
+      <p class="auth-switch">{{ copy.noAccount }} <a [routerLink]="registerPath">{{ copy.registerLink }}</a></p>
     </app-auth-modal>
   `,
 })
@@ -50,6 +51,7 @@ export class LoginPageComponent {
     email: [this.emailFromRegistration(), [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+  protected readonly copy = LOGIN_COPY;
   protected readonly registerPath = REGISTER_PATH;
   protected readonly forgotPasswordPath = FORGOT_PASSWORD_PATH;
   protected readonly pending = signal(false);
