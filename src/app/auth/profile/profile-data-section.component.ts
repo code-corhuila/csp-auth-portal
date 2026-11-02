@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { asApiError } from '../../shell-contract';
+import { AccessRecheck } from '../guards/access-recheck.service';
 import { AuthApiService } from '../data/auth-api.service';
 import { ProfileResponse, UpdateProfileRequest } from '../model/auth';
 import { ToastService } from '../ui/toast.service';
@@ -93,6 +94,7 @@ const phoneFormat = (control: AbstractControl<string>): ValidationErrors | null 
 export class ProfileDataSectionComponent implements OnInit {
   private readonly api = inject(AuthApiService);
   private readonly toasts = inject(ToastService);
+  private readonly recheck = inject(AccessRecheck);
   private readonly submitted = signal(false);
   private readonly rejected = signal<ProfileField[]>([]);
 
@@ -116,7 +118,11 @@ export class ProfileDataSectionComponent implements OnInit {
     this.loadFailure.set(null);
     this.api.getMyProfile().subscribe({
       next: profile => this.show(profile),
-      error: err => this.loadFailure.set(profileDataFailure(asApiError(err)).message),
+      error: err => {
+        const error = asApiError(err);
+        this.loadFailure.set(profileDataFailure(error).message);
+        void this.recheck.afterRefusal(error);
+      },
     });
   }
 
@@ -149,10 +155,12 @@ export class ProfileDataSectionComponent implements OnInit {
         this.toasts.show('Tus datos se actualizaron.', 'success');
       },
       error: err => {
-        const failure = profileDataFailure(asApiError(err));
+        const error = asApiError(err);
+        const failure = profileDataFailure(error);
         this.rejected.set(failure.fields);
         this.failure.set(failure.message);
         this.pending.set(false);
+        void this.recheck.afterRefusal(error);
       },
     });
   }
