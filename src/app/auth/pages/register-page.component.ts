@@ -3,9 +3,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
 import { BILLBOARD_PATH, LOGIN_PATH } from '../auth-paths';
-import { AuthApiService } from '../data/auth-api.service';
+import { SignInFlow } from '../sign-in-flow.service';
 import { AuthModalComponent } from '../ui/auth-modal.component';
-import { ToastService } from '../ui/toast.service';
 
 type Field = 'firstName' | 'lastName' | 'address' | 'phone' | 'email' | 'password';
 
@@ -83,9 +82,8 @@ type Field = 'firstName' | 'lastName' | 'address' | 'phone' | 'email' | 'passwor
   `,
 })
 export class RegisterPageComponent {
-  private readonly api = inject(AuthApiService);
+  private readonly signInFlow = inject(SignInFlow);
   private readonly router = inject(Router);
-  private readonly toasts = inject(ToastService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     firstName: ['', [Validators.required, Validators.maxLength(49)]],
@@ -116,11 +114,7 @@ export class RegisterPageComponent {
     this.pending.set(true);
     this.failure.set(null);
     const { firstName, lastName, address, phone, email, password } = this.form.getRawValue();
-    this.api.register({ name: `${firstName.trim()} ${lastName.trim()}`, email, password, phone, address }).subscribe({
-      next: () => {
-        this.toasts.show('Registro exitoso. Ahora inicia sesión con tus datos.', 'success');
-        void this.router.navigateByUrl(LOGIN_PATH, { state: { email } });
-      },
+    this.signInFlow.register({ name: `${firstName.trim()} ${lastName.trim()}`, email, password, phone, address }).subscribe({
       error: err => {
         this.failure.set(asApiError(err).userMessage);
         this.pending.set(false);

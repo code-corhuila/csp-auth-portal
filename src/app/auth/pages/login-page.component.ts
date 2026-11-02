@@ -4,11 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { asApiError } from '../../shell-contract';
 import { BILLBOARD_PATH, FORGOT_PASSWORD_PATH, REGISTER_PATH } from '../auth-paths';
-import { AuthApiService } from '../data/auth-api.service';
-import { AuthSessionService } from '../data/session-store';
-import { safeReturnUrl } from '../return-url';
+import { SignInFlow } from '../sign-in-flow.service';
 import { AuthModalComponent } from '../ui/auth-modal.component';
-import { ToastService } from '../ui/toast.service';
 
 @Component({
   selector: 'app-auth-login-page',
@@ -45,11 +42,9 @@ import { ToastService } from '../ui/toast.service';
   `,
 })
 export class LoginPageComponent {
-  private readonly api = inject(AuthApiService);
-  private readonly session = inject(AuthSessionService);
+  private readonly signInFlow = inject(SignInFlow);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly toasts = inject(ToastService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     email: [this.emailFromRegistration(), [Validators.required, Validators.email]],
@@ -76,12 +71,7 @@ export class LoginPageComponent {
     }
     this.pending.set(true);
     this.failure.set(null);
-    this.api.login(this.form.getRawValue()).subscribe({
-      next: response => {
-        this.session.start(response);
-        this.toasts.show('Sesión iniciada correctamente.', 'success');
-        void this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')));
-      },
+    this.signInFlow.signIn(this.form.getRawValue(), this.route.snapshot.queryParamMap.get('returnUrl')).subscribe({
       error: err => {
         this.failure.set(asApiError(err).userMessage);
         this.pending.set(false);
