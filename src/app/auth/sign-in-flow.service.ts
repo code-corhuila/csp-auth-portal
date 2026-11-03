@@ -1,11 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { LOGIN_PATH } from './auth-paths';
 import { LOGIN_COPY, REGISTER_COPY } from './copy/auth-copy';
 import { AuthApiService } from './data/auth-api.service';
 import { AuthSessionService } from './data/session-store';
-import { AuthResponse, LoginRequest, RegisterRequest } from './model/auth';
+import { AuthResponse, LoginRequest, RegisterRequest, RegistrationRequested } from './model/auth';
 import { safeReturnUrl } from './return-url';
 import { ToastService } from './ui/toast.service';
 
@@ -32,13 +31,11 @@ export class SignInFlow {
     );
   }
 
-  /** Registering does not sign in: it opens login with the email handed over in the navigation state, never in the URL. */
-  register(request: RegisterRequest): Observable<AuthResponse> {
-    return this.api.register(request).pipe(
-      tap(() => {
-        this.toasts.show(REGISTER_COPY.registered, 'success');
-        void this.router.navigateByUrl(LOGIN_PATH, { state: { email: request.email } });
-      }),
-    );
+  /**
+   * Registering neither signs in nor creates the account: the owner of the mailbox confirms it with the link of the email. The
+   * answer is the same for an email that already has an account, so the person is only asked to check the email.
+   */
+  register(request: RegisterRequest): Observable<RegistrationRequested> {
+    return this.api.register(request).pipe(tap(() => this.toasts.show(REGISTER_COPY.checkEmailToast, 'success')));
   }
 }
