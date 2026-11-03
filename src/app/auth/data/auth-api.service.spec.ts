@@ -131,14 +131,33 @@ describe('AuthApiService', () => {
     second.flush(response);
   });
 
-  it('says the email is already registered on EMAIL_ALREADY_REGISTERED', () => {
-    let caught: ApiError | undefined;
-    service.register(registration).subscribe({ error: e => (caught = e) });
-    http.expectOne('/api/v1/auth/register').flush(shellError(409, 'EMAIL_ALREADY_REGISTERED'), { status: 409, statusText: 'x' });
-    expect(caught?.userMessage).toBe('Este correo ya está registrado.');
+  it('returns the id of the registration request and nothing about the account', () => {
+    let received: unknown;
+    service.register(registration).subscribe(value => (received = value));
+    http.expectOne('/api/v1/auth/register').flush({ id: 'request-1' }, { status: 201, statusText: 'Created' });
+    expect(received).toEqual({ id: 'request-1' });
   });
 
-  it('keeps the message of the shell for any other registration failure', () => {
+  it('posts the confirmation with the token in the body and the Idempotency-Key of the caller', () => {
+    let received: AuthResponse | undefined;
+    service.confirmRegistration({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c' }, 'confirm-key-0001').subscribe(value => (received = value));
+    const call = http.expectOne('/api/v1/auth/register/confirm');
+    expect(call.request.body).toEqual({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c' });
+    expect(call.request.headers.get('Idempotency-Key')).toBe('confirm-key-0001');
+    expect(call.request.url).not.toContain('0b8f3c1e');
+    call.flush(response, { status: 201, statusText: 'Created' });
+    expect(received).toEqual(response);
+  });
+
+  it('hands the failure of the confirmation to the caller untouched', () => {
+    let caught: ApiError | undefined;
+    service.confirmRegistration({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c' }, 'confirm-key-0001').subscribe({ error: e => (caught = e) });
+    http.expectOne('/api/v1/auth/register/confirm').flush(shellError(401, 'INVALID_TOKEN'), { status: 401, statusText: 'x' });
+    expect(caught?.status).toBe(401);
+    expect(caught?.code).toBe('INVALID_TOKEN');
+  });
+
+  it('keeps the message of the shell for any registration failure', () => {
     let caught: ApiError | undefined;
     service.register(registration).subscribe({ error: e => (caught = e) });
     http.expectOne('/api/v1/auth/register').flush(shellError(400, 'VALIDATION_ERROR'), { status: 400, statusText: 'x' });

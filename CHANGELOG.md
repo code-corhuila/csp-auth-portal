@@ -10,6 +10,14 @@ and is tagged `v<version>` once it is merged.
 
 ## [3.0.0] - 2026-10-15
 
+### Changed
+
+- Registration no longer says whether an email has an account (code-corhuila/csp-docs#282, STRIDE information disclosure, `auth-service.yaml` 1.17.0): `POST /register` answers the same for
+  every email and creates no account, so the register modal shows "Revisa tu correo" with a neutral text and a toast instead of opening login, and the message "Este correo ya está registrado."
+  is gone. The new page `confirm-registration` (`/auth/confirm-registration#token=<uuid>`) reads the token from the URL fragment, replaces the address, confirms with
+  `POST /register/confirm` and a fresh `Idempotency-Key`, and points to login; the failures are worded in `registration-error-message.ts`, in Spanish. The table of
+  requests of the contract check has the new operation. Specs of the service, the pages, the messages, the routes and the contract.
+
 ### Fixed
 
 - The confirmation dialog and the success toast of "Quitar administrador" no longer say the change applies on the next login: removing `ADMIN` ends the sessions of that user at once (HU-AUTH-003 Scenario 4, ADR-031 amendment 2026-10-24), so they say the session closes and the user must sign in again. The text for granting `ADMIN` is unchanged ([#85](https://github.com/code-corhuila/csp-auth-portal/issues/85)).

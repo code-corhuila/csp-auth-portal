@@ -13,6 +13,10 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () => import('./pages/register-page.component').then(m => m.RegisterPageComponent),
   },
   {
+    path: 'confirm-registration',
+    loadComponent: () => import('./pages/confirm-registration-page.component').then(m => m.ConfirmRegistrationPageComponent),
+  },
+  {
     path: 'forgot-password',
     loadComponent: () => import('./pages/forgot-password-page.component').then(m => m.ForgotPasswordPageComponent),
   },

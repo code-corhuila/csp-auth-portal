@@ -44,7 +44,19 @@ export const REGISTER_COPY = {
   submit: 'Registrarse',
   haveAccount: '¿Ya tienes una cuenta?',
   loginLink: 'Inicia sesión',
-  registered: 'Registro exitoso. Ahora inicia sesión con tus datos.',
+  checkEmailTitle: 'Revisa tu correo',
+  checkEmail: 'Si el correo puede registrarse, te enviamos un enlace para confirmar tu cuenta. Ábrelo para terminar el registro.',
+  checkEmailToast: 'Revisa tu correo para confirmar tu cuenta.',
+} as const;
+
+export const CONFIRM_REGISTRATION_COPY = {
+  title: 'Confirmar cuenta',
+  confirming: 'Confirmando tu cuenta…',
+  confirmed: 'Tu cuenta quedó confirmada. Inicia sesión con tus datos.',
+  loginLink: 'Ir a iniciar sesión',
+  rejected: 'El enlace no es válido o ya venció. Regístrate de nuevo para recibir uno nuevo.',
+  registerLink: 'Volver a registrarme',
+  alreadyRegistered: 'Este correo ya tiene una cuenta. Inicia sesión.',
 } as const;
 
 export const SESSION_COPY = {
