@@ -11,7 +11,8 @@ type Field = 'firstName' | 'lastName' | 'address' | 'phone' | 'email' | 'passwor
 
 /**
  * Fields follow the mockup; the request follows RegisterRequest of csp-auth-api (ADR-024), so first and
- * last name travel joined as `name`. Like the mockup, registering does not sign in: it opens login.
+ * last name travel joined as `name`. Registering creates no account: it asks the person to check the email, the same for every
+ * address (issue csp-docs#282), and the link of the message opens the confirmation page.
  */
 @Component({
   selector: 'app-auth-register-page',
@@ -19,7 +20,11 @@ type Field = 'firstName' | 'lastName' | 'address' | 'phone' | 'email' | 'passwor
   imports: [ReactiveFormsModule, RouterLink, AuthModalComponent],
   styleUrl: './auth-form.css',
   template: `
-    <app-auth-modal [title]="copy.title" titleId="register-title" [maxWidth]="520" (closed)="close()">
+    <app-auth-modal [title]="requested() ? copy.checkEmailTitle : copy.title" titleId="register-title" [maxWidth]="520" (closed)="close()">
+      @if (requested()) {
+        <p class="form-status" role="status">{{ copy.checkEmail }}</p>
+        <p class="auth-switch"><a [routerLink]="loginPath" data-initial-focus>{{ copy.loginLink }}</a></p>
+      } @else {
       <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div class="form-row">
           <div class="form-group">
@@ -79,6 +84,7 @@ type Field = 'firstName' | 'lastName' | 'address' | 'phone' | 'email' | 'passwor
         <button class="btn-primary" type="submit" [disabled]="pending()">{{ copy.submit }}</button>
       </form>
       <p class="auth-switch">{{ copy.haveAccount }} <a [routerLink]="loginPath">{{ copy.loginLink }}</a></p>
+      }
     </app-auth-modal>
   `,
 })
@@ -97,6 +103,7 @@ export class RegisterPageComponent {
   protected readonly copy = REGISTER_COPY;
   protected readonly loginPath = LOGIN_PATH;
   protected readonly pending = signal(false);
+  protected readonly requested = signal(false);
   protected readonly failure = signal<string | null>(null);
   private readonly submitted = signal(false);
 
@@ -117,6 +124,10 @@ export class RegisterPageComponent {
     this.failure.set(null);
     const { firstName, lastName, address, phone, email, password } = this.form.getRawValue();
     this.signInFlow.register({ name: `${firstName.trim()} ${lastName.trim()}`, email, password, phone, address }).subscribe({
+      next: () => {
+        this.requested.set(true);
+        this.pending.set(false);
+      },
       error: err => {
         this.failure.set(asApiError(err).userMessage);
         this.pending.set(false);

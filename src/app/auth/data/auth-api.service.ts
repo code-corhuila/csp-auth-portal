@@ -2,12 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { ApiError, asApiError } from '../../shell-contract';
-import { AuthResponse, ChangePasswordRequest, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, ProfileResponse, RefreshRequest, RegisterRequest, ResetPasswordRequest, UpdateProfileRequest } from '../model/auth';
+import { AuthResponse, ChangePasswordRequest, ConfirmRegistrationRequest, EmailChangeRequest, EmailVerificationRequest, ForgotPasswordRequest, LoginRequest, LogoutRequest, ProfileResponse, RefreshRequest, RegisterRequest, RegistrationRequested, ResetPasswordRequest, UpdateProfileRequest } from '../model/auth';
 
 const BASE = '/api/v1/auth';
 
 /**
- * Typed calls to csp-auth-api (auth-service 1.9.0). The injected HttpClient is the SHELL's:
+ * Typed calls to csp-auth-api (auth-service 1.17.0). The injected HttpClient is the SHELL's:
  * its interceptor completes the '/api/v1/...' path, attaches the correlation id and
  * normalises every error. The portal never compares or keeps a password.
  */
@@ -34,12 +34,25 @@ export class AuthApiService {
     return this.http.post<void>(`${BASE}/logout`, request, { keepalive: true });
   }
 
-  register(request: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${BASE}/register`, request, {
+  /**
+   * The contract answers 201 with the id of the registration request whether or not the email already has an account
+   * (issue csp-docs#282): the account is created when the owner opens the link of the email, see `confirmRegistration`.
+   */
+  register(request: RegisterRequest): Observable<RegistrationRequested> {
+    return this.http.post<RegistrationRequested>(`${BASE}/register`, request, {
       headers: { 'Idempotency-Key': crypto.randomUUID() },
-    }).pipe(
-      catchError(err => throwError(() => withMessage(err, registerMessage))),
-    );
+    });
+  }
+
+  /**
+   * Creates the account of the registration the token belongs to and answers its session, which the portal does not use: like the
+   * mockup, it opens login. 401 INVALID_TOKEN has one body for an unknown, expired, used or superseded token. The caller owns the
+   * key of one confirmation, so a retry of it repeats the key and the API replays the answer. The token is never logged.
+   */
+  confirmRegistration(request: ConfirmRegistrationRequest, idempotencyKey: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${BASE}/register/confirm`, request, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    });
   }
 
   /**
@@ -121,8 +134,4 @@ function rateLimitedMessage(retryAfterSeconds: number | undefined): string {
   }
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return `Demasiados intentos fallidos. Inténtalo de nuevo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`;
-}
-
-function registerMessage(error: ApiError): string | undefined {
-  return error.code === 'EMAIL_ALREADY_REGISTERED' ? 'Este correo ya está registrado.' : undefined;
 }

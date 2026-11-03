@@ -10,6 +10,16 @@ export interface RegisterRequest {
   address: string;
 }
 
+/** What `POST /register` answers: the id of the registration request, the same for an email with an account and a free one. */
+export interface RegistrationRequested {
+  id: string;
+}
+
+export interface ConfirmRegistrationRequest {
+  /** The UUID of the link sent by email; read from the URL fragment, never logged. */
+  token: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
