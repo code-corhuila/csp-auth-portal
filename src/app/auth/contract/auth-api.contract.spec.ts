@@ -27,6 +27,7 @@ describe('auth API requests against the contract requirements', () => {
   const callers: Record<string, () => void> = {
     register: () =>
       api.register({ email: 'a@cinesync.com', password: 'SecurePass123!', name: 'A B', phone: '3001234567', address: 'Calle 1' }).subscribe(),
+    confirmRegistration: () => api.confirmRegistration({ token: '0b8f3c1e-5a7d-4e2b-9c64-1d2e3f4a5b6c' }, crypto.randomUUID()).subscribe(),
     login: () => api.login({ email: 'a@cinesync.com', password: 'SecurePass123!' }).subscribe({ error: () => undefined }),
     refreshToken: () => api.refresh({ refreshToken: 'refresh' }).subscribe(),
     logout: () => api.logout({ refreshToken: 'refresh' }).subscribe(),

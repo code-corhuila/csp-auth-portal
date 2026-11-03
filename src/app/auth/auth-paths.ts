@@ -2,5 +2,6 @@
 export const LOGIN_PATH = '/auth/login';
 export const BILLBOARD_PATH = '/movies';
 export const REGISTER_PATH = '/auth/register';
+export const CONFIRM_REGISTRATION_PATH = '/auth/confirm-registration';
 export const FORGOT_PASSWORD_PATH = '/auth/forgot-password';
 export const RESET_PASSWORD_PATH = '/auth/reset-password';

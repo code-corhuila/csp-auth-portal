@@ -3,6 +3,7 @@
   "note": "What the contract requires of each operation that csp-auth-portal calls. scripts/check-contract.mjs compares this table with the contract in CI; the spec src/app/auth/contract/auth-api.contract.spec.ts makes every call and checks it.",
   "operations": [
     { "operationId": "register", "method": "POST", "path": "/register", "requiredHeaders": ["Idempotency-Key"] },
+    { "operationId": "confirmRegistration", "method": "POST", "path": "/register/confirm", "requiredHeaders": ["Idempotency-Key"] },
     { "operationId": "login", "method": "POST", "path": "/login", "requiredHeaders": [] },
     { "operationId": "refreshToken", "method": "POST", "path": "/refresh", "requiredHeaders": [] },
     { "operationId": "logout", "method": "POST", "path": "/logout", "requiredHeaders": [] },

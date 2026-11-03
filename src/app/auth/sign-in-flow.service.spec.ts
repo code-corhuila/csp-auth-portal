@@ -82,12 +82,12 @@ describe('SignInFlow', () => {
   });
 
   describe('register', () => {
-    it('confirms, opens login with the email in the navigation state and starts no session', () => {
-      api.register.and.returnValue(of(response));
+    it('asks the person to check the email and neither navigates nor starts a session', () => {
+      api.register.and.returnValue(of({ id: 'request-1' }));
       flow.register(registration).subscribe();
       expect(api.register).toHaveBeenCalledOnceWith(registration);
-      expect(toasts.show).toHaveBeenCalledOnceWith('Registro exitoso. Ahora inicia sesión con tus datos.', 'success');
-      expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/auth/login', { state: { email: credentials.email } });
+      expect(toasts.show).toHaveBeenCalledOnceWith('Revisa tu correo para confirmar tu cuenta.', 'success');
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
       expect(session.isAuthenticated()).toBeFalse();
     });
 
