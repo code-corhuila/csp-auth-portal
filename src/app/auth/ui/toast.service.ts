@@ -1,6 +1,6 @@
 import { ApplicationRef, Component, createComponent, DOCUMENT, EnvironmentInjector, inject, Injectable, signal } from '@angular/core';
 
-export type ToastType = 'info' | 'success';
+export type ToastType = 'info' | 'success' | 'error';
 
 export interface Toast {
   id: number;
@@ -69,6 +69,7 @@ export class ToastService {
     }
     .toast-info { border-left: 4px solid #38BDF8; }
     .toast-success { border-left: 4px solid #10B981; }
+    .toast-error { border-left: 4px solid #EF4444; }
     @keyframes slide-in {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
@@ -80,7 +81,7 @@ export class ToastService {
   template: `
     <div role="status" aria-live="polite">
       @for (toast of service.toasts(); track toast.id) {
-        <div class="toast toast-{{ toast.type }}">{{ toast.message }}</div>
+        <div class="toast toast-{{ toast.type }}" [attr.role]="toast.type === 'error' ? 'alert' : null">{{ toast.message }}</div>
       }
     </div>
   `,

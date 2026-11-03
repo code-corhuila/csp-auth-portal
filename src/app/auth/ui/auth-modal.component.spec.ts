@@ -6,7 +6,7 @@ import { AuthModalComponent } from './auth-modal.component';
   standalone: true,
   imports: [AuthModalComponent],
   template: `
-    <app-auth-modal title="Iniciar sesión" titleId="t" (closed)="closes = closes + 1">
+    <app-auth-modal title="Iniciar sesión" titleId="t" closeLabel="Close" (closed)="closes = closes + 1">
       <input id="first" /><button id="last" type="button">Ir</button>
     </app-auth-modal>
   `,
@@ -14,6 +14,17 @@ import { AuthModalComponent } from './auth-modal.component';
 class HostComponent {
   closes = 0;
 }
+
+@Component({
+  standalone: true,
+  imports: [AuthModalComponent],
+  template: `
+    <app-auth-modal title="Confirm" titleId="c">
+      <input id="field" /><button id="safe" type="button" data-initial-focus>Cancel</button>
+    </app-auth-modal>
+  `,
+})
+class ConfirmHostComponent {}
 
 describe('AuthModalComponent', () => {
   function create() {
@@ -46,6 +57,18 @@ describe('AuthModalComponent', () => {
     const fixture = create();
     await fixture.whenStable();
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#first'));
+  });
+
+  it('focuses the element marked data-initial-focus before the first field', async () => {
+    const fixture = TestBed.createComponent(ConfirmHostComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#safe'));
+  });
+
+  it('labels the close button with the given text', () => {
+    const button: HTMLElement = create().nativeElement.querySelector('.auth-close');
+    expect(button.getAttribute('aria-label')).toBe('Close');
   });
 
   it('keeps Tab inside the dialog', () => {

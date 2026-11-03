@@ -20,6 +20,14 @@ describe('ToastService', () => {
     expect(toasts.toasts().map(t => [t.message, t.type])).toEqual([['Sesión iniciada correctamente.', 'success']]);
   });
 
+  it('announces an error as an alert inside the status container', () => {
+    toasts.show('No se pudo.', 'error');
+    TestBed.tick();
+    const toast = document.body.querySelector('app-toast-container .toast-error')!;
+    expect(toast.getAttribute('role')).toBe('alert');
+    expect(document.body.querySelector('app-toast-container .toast-success')).toBeNull();
+  });
+
   it('removes the message after 4 seconds', () => {
     toasts.show('Hola');
     jasmine.clock().tick(3999);

@@ -1,21 +1,39 @@
 import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { ApiError } from '../../shell-contract';
+import { AuthResponse } from '../model/auth';
 import { AuthSessionService } from '../data/session-store';
-import { SYNTHETIC_USERS } from '../data/synthetic-users';
+import { AuthApiService } from '../data/auth-api.service';
 import { ToastService } from '../ui/toast.service';
 import { LoginPageComponent } from './login-page.component';
 
 describe('LoginPageComponent', () => {
-  const client = SYNTHETIC_USERS[0];
+  const client = { email: 'maria@cinesync.com', password: 'SecurePass123!' };
+  const response: AuthResponse = {
+    accessToken: 'access',
+    refreshToken: 'refresh',
+    expiresIn: 3600,
+    user: { id: '1', email: client.email, roles: ['CLIENT'] },
+  };
+  const invalid: ApiError = {
+    status: 401, code: 'UNAUTHORIZED', message: 'x', details: [], traceId: 't', userMessage: 'Correo o contraseña incorrectos.',
+  };
+  const api = {
+    login: (request: { password: string }) => (request.password === client.password ? of(response) : throwError(() => invalid)),
+  };
   let router: Router;
   let session: AuthSessionService;
   let toasts: ToastService;
+
+  afterEach(() => session.end());
 
   function create(options: { returnUrl?: string; state?: object } = {}) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        { provide: AuthApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: new Map(options.returnUrl ? [['returnUrl', options.returnUrl]] : []) } } },
       ],
     });
@@ -56,7 +74,8 @@ describe('LoginPageComponent', () => {
   it('starts a session, confirms with a toast and goes to the requested route', () => {
     const fixture = create({ returnUrl: '/booking/seats' });
     submit(fixture, client.email, client.password);
-    expect(session.user()?.id).toBe(client.id);
+    expect(session.user()?.id).toBe('1');
+    expect(session.accessToken()).toBe('access');
     expect(toasts.show).toHaveBeenCalledWith('Sesión iniciada correctamente.', 'success');
     expect(router.navigateByUrl).toHaveBeenCalledWith('/booking/seats');
   });

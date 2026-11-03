@@ -15,6 +15,7 @@ export interface ApiError {
   details: FieldError[];
   traceId: string;
   userMessage: string;
+  retryAfterSeconds?: number;
 }
 
 function isFieldError(value: unknown): value is FieldError {

@@ -1,11 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { ApiError } from '../../shell-contract';
 import { AuthApiService } from '../data/auth-api.service';
+import { IdempotencyKeyGenerator } from '../data/idempotency-key-generator';
 import { ForgotPasswordPageComponent } from './forgot-password-page.component';
 
 describe('ForgotPasswordPageComponent', () => {
+  const api = { requestPasswordReset: jasmine.createSpy('requestPasswordReset') };
+  let keyCount = 0;
+  const keys = { next: () => `key-${++keyCount}-of-a-submission` };
+
   function create() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    api.requestPasswordReset.calls.reset();
+    keyCount = 0;
+    api.requestPasswordReset.and.returnValue(of(undefined));
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: AuthApiService, useValue: api }, { provide: IdempotencyKeyGenerator, useValue: keys }],
+    });
     const fixture = TestBed.createComponent(ForgotPasswordPageComponent);
     fixture.detectChanges();
     return fixture;
@@ -40,11 +52,52 @@ describe('ForgotPasswordPageComponent', () => {
   it('does not send the request while the email is invalid', () => {
     const fixture = create();
     const root: HTMLElement = fixture.nativeElement;
-    const api = TestBed.inject(AuthApiService);
-    spyOn(api, 'requestPasswordReset').and.callThrough();
     root.querySelector('form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
     expect(api.requestPasswordReset).not.toHaveBeenCalled();
     expect(root.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('shows the failure and lets the person try again when the request is rejected', () => {
+    const fixture = create();
+    const rejected: ApiError = { status: 429, code: 'X', message: 'x', details: [], traceId: 't', userMessage: 'shell text' };
+    api.requestPasswordReset.and.returnValue(throwError(() => rejected));
+    const root: HTMLElement = fixture.nativeElement;
+    const input = root.querySelector<HTMLInputElement>('#forgot-email')!;
+    input.value = 'maria@cinesync.com';
+    input.dispatchEvent(new Event('input'));
+    root.querySelector('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    expect(root.querySelector('[role="alert"]')!.textContent).toContain('El servicio está ocupado');
+    expect(root.querySelector('[role="status"]')).toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
+  });
+
+  function submitEmail(fixture: ReturnType<typeof create>): void {
+    const root: HTMLElement = fixture.nativeElement;
+    const input = root.querySelector<HTMLInputElement>('#forgot-email')!;
+    input.value = 'maria@cinesync.com';
+    input.dispatchEvent(new Event('input'));
+    root.querySelector('form')!.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+  }
+
+  it('sends one Idempotency-Key per submission and a new one for the next submission', () => {
+    const fixture = create();
+    submitEmail(fixture);
+    submitEmail(fixture);
+    expect(api.requestPasswordReset.calls.allArgs()).toEqual([
+      [{ email: 'maria@cinesync.com' }, 'key-1-of-a-submission'],
+      [{ email: 'maria@cinesync.com' }, 'key-2-of-a-submission'],
+    ]);
+  });
+
+  it('shows the generic message of an unexpected failure when the key conflicts', () => {
+    const fixture = create();
+    const conflict: ApiError = { status: 409, code: 'IDEMPOTENCY_KEY_CONFLICT', message: 'x', details: [], traceId: 't', userMessage: 'shell text' };
+    api.requestPasswordReset.and.returnValue(throwError(() => conflict));
+    submitEmail(fixture);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')!.textContent).toContain('El servicio no está disponible');
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
   });
 });

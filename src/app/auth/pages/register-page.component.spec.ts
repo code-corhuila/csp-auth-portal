@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
 import { AuthApiService } from '../data/auth-api.service';
+import { ApiError } from '../../shell-contract';
 import { AuthSessionService } from '../data/session-store';
-import { SYNTHETIC_USERS } from '../data/synthetic-users';
 import { ToastService } from '../ui/toast.service';
 import { RegisterPageComponent } from './register-page.component';
 
@@ -25,12 +26,19 @@ const valid: Form = {
 };
 
 describe('RegisterPageComponent', () => {
+  const busy: ApiError = {
+    status: 503, code: 'SERVICE_UNAVAILABLE', message: 'x', details: [], traceId: 't', userMessage: 'El servicio no está disponible.',
+  };
+  // The API answers the same for an email that has an account and for a free one (issue csp-docs#282): the page cannot tell them apart.
+  const api = {
+    register: (request: { email: string }) => (request.email === 'busy@cinesync.com' ? throwError(() => busy) : of({ id: 'request-1' })),
+  };
   let router: Router;
   let session: AuthSessionService;
   let toasts: ToastService;
 
   function create() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: AuthApiService, useValue: api }] });
     router = TestBed.inject(Router);
     session = TestBed.inject(AuthSessionService);
     toasts = TestBed.inject(ToastService);
@@ -63,19 +71,29 @@ describe('RegisterPageComponent', () => {
     }
   });
 
-  it('registers without signing in, then opens login with the email and a toast', () => {
-    submit(create());
+  it('asks the person to check the email, with a toast, and starts no session', () => {
+    const root = submit(create());
     expect(session.isAuthenticated()).toBeFalse();
-    expect(toasts.show).toHaveBeenCalledWith('Registro exitoso. Ahora inicia sesión con tus datos.', 'success');
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/auth/login', { state: { email: 'juan@cinesync.com' } });
+    expect(toasts.show).toHaveBeenCalledWith('Revisa tu correo para confirmar tu cuenta.', 'success');
+    expect(root.querySelector('h1')!.textContent).toContain('Revisa tu correo');
+    expect(root.querySelector('[role="status"]')!.textContent).toContain('Si el correo puede registrarse');
+    expect(root.querySelector('form')).toBeNull();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('shows the same message whether the email already has an account or not and never says which', () => {
+    const free = submit(create(), { email: 'free@cinesync.com' }).textContent;
+    TestBed.resetTestingModule();
+    const taken = submit(create(), { email: 'taken@cinesync.com' }).textContent;
+    expect(taken).toBe(free);
+    expect(taken).not.toContain('ya está registrado');
   });
 
   it('sends first and last name joined as name, with phone and address', () => {
     const fixture = create();
-    const api = TestBed.inject(AuthApiService);
-    spyOn(api, 'register').and.callThrough();
+    const register = spyOn(TestBed.inject(AuthApiService), 'register').and.callThrough();
     submit(fixture);
-    expect(api.register).toHaveBeenCalledWith({
+    expect(register).toHaveBeenCalledWith({
       name: 'Juan Carlos Pérez Gómez',
       email: 'juan@cinesync.com',
       password: 'SecurePass123!',
@@ -84,9 +102,12 @@ describe('RegisterPageComponent', () => {
     });
   });
 
-  it('rejects an email that is already registered and stays open', () => {
-    const root = submit(create(), { email: SYNTHETIC_USERS[0].email });
-    expect(root.querySelector('[role="alert"]')!.textContent).toContain('ya está registrado');
+  it('shows the failure of the service, stays open and lets the person try again', () => {
+    const fixture = create();
+    const root = submit(fixture, { email: 'busy@cinesync.com' });
+    expect(root.querySelector('[role="alert"]')!.textContent).toContain('El servicio no está disponible.');
+    expect(root.querySelector('form')).not.toBeNull();
+    expect(root.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBeFalse();
     expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
 

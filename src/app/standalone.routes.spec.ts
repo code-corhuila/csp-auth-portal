@@ -1,9 +1,10 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AuthApiService } from './auth/data/auth-api.service';
 import { AuthSessionService } from './auth/data/session-store';
-import { SYNTHETIC_USERS } from './auth/data/synthetic-users';
+import { Role } from './auth/model/user';
 import { STANDALONE_ROUTES } from './standalone.routes';
 
 describe('standalone routes', () => {
@@ -11,18 +12,24 @@ describe('standalone routes', () => {
   let session: AuthSessionService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter(STANDALONE_ROUTES)] });
+    TestBed.configureTestingModule({ providers: [provideRouter(STANDALONE_ROUTES), provideHttpClient(), provideHttpClientTesting()] });
     router = TestBed.inject(Router);
     session = TestBed.inject(AuthSessionService);
   });
 
-  function signIn(email: string): void {
-    const user = SYNTHETIC_USERS.find(u => u.email === email)!;
-    TestBed.inject(AuthApiService).login({ email, password: user.password }).subscribe(r => session.start(r));
+  afterEach(() => session.end());
+
+  function signIn(roles: Role[]): void {
+    session.start({ accessToken: 't', refreshToken: 'r', expiresIn: 3600, user: { id: '1', email: 'x@cinesync.com', roles } });
   }
 
-  it('opens the login page from the root, under /auth like inside the shell', async () => {
+  it('opens the billboard placeholder from the root, since the login screen needs the shell client', async () => {
     await RouterTestingHarness.create('/');
+    expect(router.url).toBe('/movies');
+  });
+
+  it('keeps the login page under /auth like inside the shell', async () => {
+    await RouterTestingHarness.create('/auth/login');
     expect(router.url).toBe('/auth/login');
   });
 
@@ -33,13 +40,20 @@ describe('standalone routes', () => {
   });
 
   it('opens /admin for the ADMIN session', async () => {
-    signIn('admin@cinesync.com');
+    signIn(['CLIENT', 'ADMIN']);
     await RouterTestingHarness.create('/admin');
     expect(router.url).toBe('/admin');
   });
 
+  it('opens the user roles page at /admin/users for the ADMIN session', async () => {
+    signIn(['CLIENT', 'ADMIN']);
+    const harness = await RouterTestingHarness.create('/admin/users');
+    expect(router.url).toBe('/admin/users');
+    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('Roles de usuarios');
+  });
+
   it('sends a CLIENT-only session from /admin to the billboard', async () => {
-    signIn('maria@cinesync.com');
+    signIn(['CLIENT']);
     await RouterTestingHarness.create('/admin');
     expect(router.url).toBe('/movies');
   });
