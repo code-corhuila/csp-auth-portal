@@ -1,10 +1,10 @@
-import { COMMON_COPY, LOGIN_COPY, REGISTER_COPY, SESSION_COPY } from './auth-copy';
+import { COMMON_COPY, CONFIRM_REGISTRATION_COPY, LOGIN_COPY, REGISTER_COPY, SESSION_COPY } from './auth-copy';
 
 describe('auth copy', () => {
   const texts = (copy: Record<string, string>): string[] => Object.values(copy);
 
   it('has no empty text', () => {
-    for (const copy of [COMMON_COPY, LOGIN_COPY, REGISTER_COPY, SESSION_COPY]) {
+    for (const copy of [COMMON_COPY, CONFIRM_REGISTRATION_COPY, LOGIN_COPY, REGISTER_COPY, SESSION_COPY]) {
       for (const text of texts(copy)) {
         expect(text.trim()).not.toBe('');
       }
